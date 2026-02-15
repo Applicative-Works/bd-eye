@@ -1,0 +1,89 @@
+:root {
+  --color-bg-primary: #0d1117;
+  --color-bg-secondary: #161b22;
+  --color-bg-tertiary: #21262d;
+  --color-border: #30363d;
+  --color-border-muted: #21262d;
+
+  --color-text-primary: #e6edf3;
+  --color-text-secondary: #8b949e;
+  --color-text-tertiary: #6e7681;
+  --color-text-link: #58a6ff;
+
+  --color-accent-primary: #58a6ff;
+  --color-accent-hover: #79c0ff;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --color-p0-bg: #4c1518;
+  --color-p0-border: #da3633;
+  --color-p0-text: #ff7b72;
+
+  --color-p1-bg: #4c2c19;
+  --color-p1-border: #f0883e;
+  --color-p1-text: #ffa657;
+
+  --color-p2-bg: #1c2e42;
+  --color-p2-border: #58a6ff;
+  --color-p2-text: #79c0ff;
+
+  --color-p3-bg: #1a2e22;
+  --color-p3-border: #3fb950;
+  --color-p3-text: #56d364;
+
+  --color-p4-bg: #21262d;
+  --color-p4-border: #484f58;
+  --color-p4-text: #8b949e;
+
+  --color-open-bg: #1c2e42;
+  --color-open-border: #58a6ff;
+  --color-open-text: #79c0ff;
+
+  --color-in-progress-bg: #2e2a19;
+  --color-in-progress-border: #d29922;
+  --color-in-progress-text: #e3b341;
+
+  --color-closed-bg: #1a1e23;
+  --color-closed-border: #8b949e;
+  --color-closed-text: #8b949e;
+
+  --color-type-task: #58a6ff;
+  --color-type-bug: #ff7b72;
+  --color-type-feature: #a371f7;
+  --color-type-epic: #ffa657;
+
+  --color-blocked-bg: #4c1518;
+  --color-blocked-border: #da3633;
+  --color-blocked-icon: #ff7b72;
+
+  --color-ready-bg: #1a2e22;
+  --color-ready-border: #3fb950;
+  --color-ready-icon: #56d364;
+
+  --color-blocking-text: #d29922;
+
+  --color-success: #3fb950;
+  --color-warning: #d29922;
+  --color-error: #da3633;
+}

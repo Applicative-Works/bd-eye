@@ -1,0 +1,31 @@
+{
+  "name": "bd-eye",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"node --watch src/server/index.js\" \"vite\"",
+    "dev:server": "node --watch src/server/index.js",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "node src/server/index.js",
+    "lint": "eslint src/",
+    "format": "prettier --write 'src/**/*.{js,jsx,css}'",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.9",
+    "@preact/signals": "^2.0.0",
+    "better-sqlite3": "^11.0.0",
+    "chokidar": "^4.0.0",
+    "hono": "^4.0.0",
+    "preact": "^10.25.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "concurrently": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.7.0"
+  }
+}
