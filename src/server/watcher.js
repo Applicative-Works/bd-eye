@@ -47,7 +47,7 @@ const watchDoltDb = (config, onChange) => {
 
   const poll = async () => {
     try {
-      const mysql = await import('mysql2/promise')
+      const mysql = (await import('mysql2/promise')).default
       const conn = await mysql.createConnection({
         host: config.host ?? '127.0.0.1',
         port: config.port ?? 3306,
