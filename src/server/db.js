@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 
 /**
@@ -79,13 +79,13 @@ export const detectDbType = (path) => {
   return 'sqlite'
 }
 
-/** @returns {{ host: string, port: number, user: string, password: string, database: string }} */
-export const doltConfig = () => ({
+/** @param {string} [dbPath] @returns {{ host: string, port: number, user: string, password: string, database: string }} */
+export const doltConfig = (dbPath) => ({
   host: process.env.DOLT_HOST ?? '127.0.0.1',
   port: Number(process.env.DOLT_PORT ?? 3306),
   user: process.env.DOLT_USER ?? 'root',
   password: process.env.DOLT_PASSWORD ?? '',
-  database: process.env.DOLT_DATABASE ?? 'beads'
+  database: process.env.DOLT_DATABASE ?? (dbPath ? basename(dbPath) : 'beads')
 })
 
 /** @param {string} [path] @returns {Promise<{ db: Db, dbType: 'sqlite' | 'dolt', dbPath: string }>} */
@@ -95,7 +95,7 @@ export const openDb = async (path) => {
 
   if (dbType === 'dolt') {
     const { openDoltDb } = await import('./db-dolt.js')
-    const db = await openDoltDb(doltConfig())
+    const db = await openDoltDb(doltConfig(dbPath))
     return { db, dbType, dbPath }
   }
 

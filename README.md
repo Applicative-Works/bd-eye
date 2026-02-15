@@ -52,17 +52,25 @@ When `BEADS_DB` points to a directory containing a `.dolt` subdirectory, bd-eye 
 
 ### Dolt setup
 
-```sh
-dolt sql-server -u root
-```
-
-Then point `BEADS_DB` at the Dolt repo directory:
+Start the Dolt SQL server, pointing `--data-dir` at the directory containing the Dolt repo(s):
 
 ```sh
-BEADS_DB=/path/to/dolt-repo npm start
+dolt sql-server --host 127.0.0.1 --port 3306 --data-dir .beads/dolt
 ```
 
-Live updates work by polling `HASHOF('HEAD')` every 2 seconds.
+Then point `BEADS_DB` at the specific Dolt repo directory (the one containing the `.dolt` subdirectory):
+
+```sh
+BEADS_DB=.beads/dolt/beads_bd-eye npm start
+```
+
+The database name is derived from the directory name (e.g. `beads_bd-eye`), so `DOLT_DATABASE` doesn't need to be set unless the database name differs from the directory. If the Dolt server is on a non-default port, set `DOLT_PORT`:
+
+```sh
+BEADS_DB=.beads/dolt/beads_bd-eye DOLT_PORT=3307 npm start
+```
+
+Live updates work by polling `HASHOF('HEAD')` every 2 seconds — any Dolt commit triggers a refresh.
 
 ## Keyboard Shortcuts
 

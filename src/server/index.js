@@ -46,7 +46,7 @@ const broadcast = (event) => {
 
 const { db, dbType, dbPath } = await openDb()
 
-const watcherConfig = dbType === 'dolt' ? doltConfig() : dbPath
+const watcherConfig = dbType === 'dolt' ? doltConfig(dbPath) : dbPath
 const watcher = createWatcher(dbType, watcherConfig, () => broadcast('refresh'))
 
 app.route('/api', issueRoutes(db))
