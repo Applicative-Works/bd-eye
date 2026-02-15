@@ -1,8 +1,29 @@
 {
   "name": "bd-eye",
   "version": "0.1.0",
+  "description": "Visual issue tracker with kanban board and dependency graph",
   "private": true,
   "type": "module",
+  "author": "Daniel Chicot",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Applicative-Works/bd-eye.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Applicative-Works/bd-eye/issues"
+  },
+  "homepage": "https://github.com/Applicative-Works/bd-eye#readme",
+  "keywords": [
+    "issue-tracking",
+    "kanban",
+    "beads",
+    "visualization",
+    "dependency-graph"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "concurrently \"node --watch src/server/index.js\" \"vite\"",
     "dev:server": "node --watch src/server/index.js",
