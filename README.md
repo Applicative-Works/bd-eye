@@ -1,6 +1,6 @@
 # bd-eye
 
-A read-only visual dashboard for [Beads](https://github.com/steveyegge/beads) issue databases. It watches the underlying SQLite file for changes and pushes live updates to all connected browsers via Server-Sent Events.
+A read-only visual dashboard for [Beads](https://github.com/steveyegge/beads) issue databases. It supports both SQLite and [Dolt](https://www.dolthub.com/) backends, watching for changes and pushing live updates to all connected browsers via Server-Sent Events.
 
 ## Features
 
@@ -16,7 +16,7 @@ A read-only visual dashboard for [Beads](https://github.com/steveyegge/beads) is
 ## Prerequisites
 
 - Node.js >= 18
-- A Beads SQLite database (`.beads/*.db`)
+- A Beads database — either a SQLite file (`.beads/*.db`) or a running Dolt SQL server
 
 ## Quick Start
 
@@ -36,10 +36,33 @@ This starts the API server on port 3333 and the Vite dev server on port 5174 wit
 
 ## Environment Variables
 
-| Variable   | Description                                      | Default                                            |
-|------------|--------------------------------------------------|----------------------------------------------------|
-| `BEADS_DB` | Absolute path to the Beads SQLite database file  | Auto-discovered from `.beads/` up the directory tree, falling back to `~/.beads/default.db` |
-| `PORT`     | HTTP port for the production server              | `3333`                                             |
+| Variable        | Description                                      | Default                                            |
+|-----------------|--------------------------------------------------|----------------------------------------------------|
+| `BEADS_DB`      | Path to the Beads database (`.db` file or Dolt repo directory) | Auto-discovered from `.beads/` up the directory tree, falling back to `~/.beads/default.db` |
+| `PORT`          | HTTP port for the production server              | `3333`                                             |
+| `DOLT_HOST`     | Dolt SQL server hostname                         | `127.0.0.1`                                        |
+| `DOLT_PORT`     | Dolt SQL server port                             | `3306`                                             |
+| `DOLT_USER`     | Dolt SQL server username                         | `root`                                             |
+| `DOLT_PASSWORD`  | Dolt SQL server password                         | *(empty)*                                          |
+| `DOLT_DATABASE` | Dolt database name                               | `beads`                                            |
+
+### Database detection
+
+When `BEADS_DB` points to a directory containing a `.dolt` subdirectory, bd-eye connects to a Dolt SQL server using the `DOLT_*` variables. Otherwise it opens the path as a SQLite file via better-sqlite3.
+
+### Dolt setup
+
+```sh
+dolt sql-server -u root
+```
+
+Then point `BEADS_DB` at the Dolt repo directory:
+
+```sh
+BEADS_DB=/path/to/dolt-repo npm start
+```
+
+Live updates work by polling `HASHOF('HEAD')` every 2 seconds.
 
 ## Keyboard Shortcuts
 
@@ -68,10 +91,13 @@ graph TD
     subgraph Server ["Server (Hono + Node)"]
         API[REST API]
         Stream[SSE Endpoint]
-        Watcher[File Watcher]
+        Watcher[Watcher Factory]
     end
 
-    DB[(Beads SQLite DB)]
+    subgraph Database
+        SQLite[(SQLite DB)]
+        Dolt[(Dolt SQL Server)]
+    end
 
     Router --> State
     State --> Views
@@ -80,12 +106,14 @@ graph TD
     Detail --> API
     Search --> API
     SSE --> Stream
-    Watcher -->|chokidar| DB
+    Watcher -->|chokidar| SQLite
+    Watcher -->|poll HASHOF HEAD| Dolt
     Watcher -->|broadcast refresh| Stream
-    API -->|better-sqlite3 readonly| DB
+    API -->|better-sqlite3 readonly| SQLite
+    API -->|mysql2/promise| Dolt
 ```
 
-The server opens the Beads database in read-only WAL mode and exposes a REST API via Hono. A chokidar file watcher monitors the database and its WAL/SHM files; on any change it broadcasts a `refresh` event over SSE to all connected clients. The Preact client uses `@preact/signals` for reactive state and a hash-based router to drive four views, each fetching data from the API and re-fetching on SSE notifications.
+The server auto-detects the database type and opens it via the appropriate driver (better-sqlite3 for SQLite, mysql2 for Dolt). For SQLite, a chokidar file watcher monitors the database and its WAL/SHM files. For Dolt, a poller checks `HASHOF('HEAD')` every 2 seconds. On any change, a `refresh` event is broadcast over SSE to all connected clients. The Preact client uses `@preact/signals` for reactive state and a hash-based router to drive four views, each fetching data from the API and re-fetching on SSE notifications.
 
 ## License
 

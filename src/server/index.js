@@ -4,9 +4,9 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { logger } from 'hono/logger'
-import { openDb, resolveDbPath } from './db.js'
+import { openDb, doltConfig } from './db.js'
 import { issueRoutes } from './routes/issues.js'
-import { watchDb } from './watcher.js'
+import { createWatcher } from './watcher.js'
 
 const app = new Hono()
 
@@ -44,9 +44,10 @@ const broadcast = (event) => {
   }
 }
 
-const dbPath = resolveDbPath()
-const db = openDb(dbPath)
-const watcher = watchDb(dbPath, () => broadcast('refresh'))
+const { db, dbType, dbPath } = await openDb()
+
+const watcherConfig = dbType === 'dolt' ? doltConfig() : dbPath
+const watcher = createWatcher(dbType, watcherConfig, () => broadcast('refresh'))
 
 app.route('/api', issueRoutes(db))
 
@@ -59,12 +60,12 @@ const port = Number(process.env.PORT ?? 3333)
 
 serve({ fetch: app.fetch, port }, () => {
   console.log(`bd-eye listening on http://localhost:${port}`)
-  console.log(`watching ${dbPath}`)
+  console.log(`database: ${dbType} @ ${dbPath}`)
 })
 
 const shutdown = async () => {
   await watcher.close()
-  db.close()
+  await db.close()
   process.exit(0)
 }
 

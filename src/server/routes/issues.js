@@ -13,9 +13,9 @@ const labelMap = (rows) => {
 }
 
 /** @param {import('../db.js').Db} db @param {import('../db.js').Issue[]} issues */
-const attachLabels = (db, issues) => {
+const attachLabels = async (db, issues) => {
   if (issues.length === 0) return issues
-  const map = labelMap(db.allLabels())
+  const map = labelMap(await db.allLabels())
   return issues.map((issue) => ({ ...issue, labels: map.get(issue.id) ?? [] }))
 }
 
@@ -23,70 +23,70 @@ const attachLabels = (db, issues) => {
 export const issueRoutes = (db) => {
   const router = new Hono()
 
-  router.get('/issues', (c) => {
+  router.get('/issues', async (c) => {
     const status = c.req.query('status')
     const priority = c.req.query('priority')
     const type = c.req.query('type')
     const assignee = c.req.query('assignee')
 
-    let issues = db.allIssues()
+    let issues = await db.allIssues()
 
     if (status) issues = issues.filter((i) => i.status === status)
     if (priority) issues = issues.filter((i) => i.priority === Number(priority))
     if (type) issues = issues.filter((i) => i.issue_type === type)
     if (assignee) issues = issues.filter((i) => i.assignee === assignee)
 
-    const data = attachLabels(db, issues)
+    const data = await attachLabels(db, issues)
     return c.json({ data, count: data.length })
   })
 
-  router.get('/issues/ready', (c) => {
-    const data = attachLabels(db, db.readyIssues())
+  router.get('/issues/ready', async (c) => {
+    const data = await attachLabels(db, await db.readyIssues())
     return c.json({ data, count: data.length })
   })
 
-  router.get('/issues/blocked', (c) => {
-    const data = attachLabels(db, db.blockedIssues())
+  router.get('/issues/blocked', async (c) => {
+    const data = await attachLabels(db, await db.blockedIssues())
     return c.json({ data, count: data.length })
   })
 
-  router.get('/issues/:id', (c) => {
-    const issue = db.issueById(c.req.param('id'))
+  router.get('/issues/:id', async (c) => {
+    const issue = await db.issueById(c.req.param('id'))
     if (!issue) return c.json({ error: 'Not found' }, 404)
 
-    const [labelled] = attachLabels(db, [issue])
-    const comments = db.commentsFor(issue.id)
+    const [labelled] = await attachLabels(db, [issue])
+    const comments = await db.commentsFor(issue.id)
     return c.json({ data: { ...labelled, comments } })
   })
 
-  router.get('/issues/:id/dependencies', (c) => {
-    const data = db.dependenciesFor(c.req.param('id'))
+  router.get('/issues/:id/dependencies', async (c) => {
+    const data = await db.dependenciesFor(c.req.param('id'))
     return c.json({ data })
   })
 
-  router.get('/epics', (c) => {
-    const epics = db.epics()
-    const data = epics.map((epic) => {
-      const children = db.epicChildren(epic.id)
+  router.get('/epics', async (c) => {
+    const epics = await db.epics()
+    const data = await Promise.all(epics.map(async (epic) => {
+      const children = await db.epicChildren(epic.id)
       const closed_count = children.filter((ch) => ch.status === 'closed').length
       return { ...epic, child_count: children.length, closed_count }
-    })
+    }))
     return c.json({ data })
   })
 
-  router.get('/epics/:id/children', (c) => {
-    const data = attachLabels(db, db.epicChildren(c.req.param('id')))
+  router.get('/epics/:id/children', async (c) => {
+    const data = await attachLabels(db, await db.epicChildren(c.req.param('id')))
     return c.json({ data, count: data.length })
   })
 
-  router.get('/labels', (c) => {
-    return c.json({ data: db.labels() })
+  router.get('/labels', async (c) => {
+    return c.json({ data: await db.labels() })
   })
 
-  router.get('/search', (c) => {
+  router.get('/search', async (c) => {
     const q = c.req.query('q')
     if (!q) return c.json({ data: [], count: 0 })
-    const data = attachLabels(db, db.searchIssues(q))
+    const data = await attachLabels(db, await db.searchIssues(q))
     return c.json({ data, count: data.length })
   })
 
