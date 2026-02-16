@@ -38,36 +38,34 @@ This starts the API server on port 3333 and the Vite dev server on port 5174 wit
 
 | Variable        | Description                                      | Default                                            |
 |-----------------|--------------------------------------------------|----------------------------------------------------|
-| `BEADS_DB`      | Path to the Beads database (`.db` file or Dolt repo directory) | Auto-discovered from `.beads/` up the directory tree, falling back to `~/.beads/default.db` |
 | `PORT`          | HTTP port for the production server              | `3333`                                             |
+| `BEADS_DB`      | Path to the Beads database (`.db` file or Dolt repo directory) | Auto-discovered from `.beads/` up the directory tree |
 | `DOLT_HOST`     | Dolt SQL server hostname                         | `127.0.0.1`                                        |
 | `DOLT_PORT`     | Dolt SQL server port                             | `3306`                                             |
 | `DOLT_USER`     | Dolt SQL server username                         | `root`                                             |
 | `DOLT_PASSWORD`  | Dolt SQL server password                         | *(empty)*                                          |
-| `DOLT_DATABASE` | Dolt database name                               | `beads`                                            |
+| `DOLT_DATABASE` | Dolt database name                               | Auto-discovered if the server has exactly one user database |
 
 ### Database detection
 
-When `BEADS_DB` points to a directory containing a `.dolt` subdirectory, bd-eye connects to a Dolt SQL server using the `DOLT_*` variables. Otherwise it opens the path as a SQLite file via better-sqlite3.
+Setting any `DOLT_*` environment variable activates Dolt mode — no `BEADS_DB` is needed. When no `DOLT_*` variables are set, `BEADS_DB` is resolved by walking up the directory tree looking for `.beads/*.db`; if the resolved path is a directory with a `.dolt` subdirectory, Dolt mode is used with the database name derived from the directory name.
 
 ### Dolt setup
 
-Start the Dolt SQL server, pointing `--data-dir` at the directory containing the Dolt repo(s):
+Start a Dolt SQL server, then point bd-eye at it:
 
 ```sh
-dolt sql-server --host 127.0.0.1 --port 3306 --data-dir .beads/dolt
+dolt sql-server --host 127.0.0.1 --port 3307 --data-dir .beads/dolt
 ```
 
-Then point `BEADS_DB` at the specific Dolt repo directory (the one containing the `.dolt` subdirectory):
-
 ```sh
-BEADS_DB=.beads/dolt/beads_bd-eye npm start
+DOLT_PORT=3307 npm start
 ```
 
-The database name is derived from the directory name (e.g. `beads_bd-eye`), so `DOLT_DATABASE` doesn't need to be set unless the database name differs from the directory. If the Dolt server is on a non-default port, set `DOLT_PORT`:
+If the server hosts exactly one user database, it is selected automatically. If there are multiple databases, set `DOLT_DATABASE` explicitly:
 
 ```sh
-BEADS_DB=.beads/dolt/beads_bd-eye DOLT_PORT=3307 npm start
+DOLT_PORT=3307 DOLT_DATABASE=beads_omnisearch npm start
 ```
 
 Live updates work by polling `HASHOF('HEAD')` every 2 seconds — any Dolt commit triggers a refresh.

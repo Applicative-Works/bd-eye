@@ -71,12 +71,33 @@ export const resolveDbPath = () => {
   return join(homedir(), '.beads', 'default.db')
 }
 
+const hasDoltEnv = () =>
+  ['DOLT_HOST', 'DOLT_PORT', 'DOLT_USER', 'DOLT_PASSWORD', 'DOLT_DATABASE'].some((k) => k in process.env)
+
 /** @param {string} path @returns {'sqlite' | 'dolt'} */
 export const detectDbType = (path) => {
+  if (hasDoltEnv()) return 'dolt'
   try {
     if (statSync(path).isDirectory() && existsSync(join(path, '.dolt'))) return 'dolt'
   } catch { /* not a directory */ }
   return 'sqlite'
+}
+
+const SYSTEM_DBS = new Set(['information_schema', 'mysql', 'sys', 'performance_schema'])
+
+/** @param {{ host: string, port: number, user: string, password: string }} config */
+const discoverDoltDatabase = async (config) => {
+  const mysql = (await import('mysql2/promise')).default
+  const conn = await mysql.createConnection(config)
+  try {
+    const [rows] = await conn.query('SHOW DATABASES')
+    const userDbs = /** @type {any[]} */ (rows).map((r) => r.Database).filter((d) => !SYSTEM_DBS.has(d))
+    if (userDbs.length === 1) return userDbs[0]
+    if (userDbs.length === 0) throw new Error('no user databases found on Dolt server')
+    throw new Error(`multiple databases found (${userDbs.join(', ')}), set DOLT_DATABASE to choose one`)
+  } finally {
+    await conn.end()
+  }
 }
 
 /** @param {string} [dbPath] @returns {{ host: string, port: number, user: string, password: string, database: string }} */
@@ -85,11 +106,21 @@ export const doltConfig = (dbPath) => ({
   port: Number(process.env.DOLT_PORT ?? 3306),
   user: process.env.DOLT_USER ?? 'root',
   password: process.env.DOLT_PASSWORD ?? '',
-  database: process.env.DOLT_DATABASE ?? (dbPath ? basename(dbPath) : 'beads')
+  database: process.env.DOLT_DATABASE ?? (dbPath ? basename(dbPath) : '')
 })
 
 /** @param {string} [path] @returns {Promise<{ db: Db, dbType: 'sqlite' | 'dolt', dbPath: string }>} */
 export const openDb = async (path) => {
+  if (!path && hasDoltEnv()) {
+    const config = doltConfig()
+    if (!config.database) {
+      config.database = await discoverDoltDatabase(config)
+    }
+    const { openDoltDb } = await import('./db-dolt.js')
+    const db = await openDoltDb(config)
+    return { db, dbType: /** @type {const} */ ('dolt'), dbPath: `dolt://${config.host}:${config.port}/${config.database}` }
+  }
+
   const dbPath = path ?? resolveDbPath()
   const dbType = detectDbType(dbPath)
 

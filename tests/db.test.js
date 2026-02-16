@@ -37,6 +37,13 @@ describe('detectDbType', () => {
   ])('returns %s for %s', (_label, pathFn, expected) => {
     expect(detectDbType(pathFn())).toBe(expected)
   })
+
+  it.each([
+    'DOLT_HOST', 'DOLT_PORT', 'DOLT_USER', 'DOLT_PASSWORD', 'DOLT_DATABASE',
+  ])('returns dolt when %s env var is set', (envVar) => {
+    vi.stubEnv(envVar, 'any-value')
+    expect(detectDbType('/no/such/path')).toBe('dolt')
+  })
 })
 
 describe('resolveDbPath', () => {
@@ -102,9 +109,9 @@ describe('doltConfig', () => {
     expect(doltConfig('/data/repos/my-project').database).toBe('my-project')
   })
 
-  it('defaults database to beads when no dbPath given', () => {
-    expect(doltConfig().database).toBe('beads')
-    expect(doltConfig(undefined).database).toBe('beads')
+  it('defaults database to empty string when no dbPath given', () => {
+    expect(doltConfig().database).toBe('')
+    expect(doltConfig(undefined).database).toBe('')
   })
 
   it.each([
