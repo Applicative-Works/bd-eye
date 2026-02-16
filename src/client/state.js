@@ -11,3 +11,4 @@ export const filters = signal({
   readyOnly: false
 })
 export const columnMode = signal('status')
+export const closedDays = signal(null)

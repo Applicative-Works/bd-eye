@@ -31,3 +31,6 @@ Thumbs.db
 coverage/
 .nyc_output/
 .aider*
+
+# Beads sync worktree
+.beads/sync/
