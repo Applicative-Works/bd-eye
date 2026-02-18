@@ -1,3 +1,4 @@
+import { useDraggable } from '@dnd-kit/core';
 import { Badge, PillBadge } from './Badge.jsx';
 
 /**
@@ -15,9 +16,9 @@ import { Badge, PillBadge } from './Badge.jsx';
  */
 
 /**
- * @param {{ issue: CardIssue, onClick?: (id: string) => void }} props
+ * @param {{ issue: CardIssue, onClick?: (id: string) => void, isDragging?: boolean, isOverlay?: boolean }} props
  */
-export const Card = ({ issue, onClick }) => {
+export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) => {
   const {
     id,
     title,
@@ -30,11 +31,21 @@ export const Card = ({ issue, onClick }) => {
     blocks_count = 0,
   } = issue;
 
-  const cardClass = blocked_by_count > 0
-    ? 'card card-blocked'
-    : status === 'open' && blocked_by_count === 0
-    ? 'card card-ready'
-    : 'card';
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    data: { issue },
+    disabled: isOverlay,
+  });
+
+  const style = transform
+    ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
+    : undefined;
+
+  const cardClass = [
+    'card',
+    blocked_by_count > 0 ? 'card-blocked' : status === 'open' && blocked_by_count === 0 ? 'card-ready' : '',
+    isDragging ? 'card-dragging' : '',
+  ].filter(Boolean).join(' ');
 
   const handleClick = () => {
     if (onClick) {
@@ -43,7 +54,13 @@ export const Card = ({ issue, onClick }) => {
   };
 
   return (
-    <div class={cardClass} onClick={handleClick}>
+    <div
+      class={cardClass}
+      ref={isOverlay ? undefined : setNodeRef}
+      style={style}
+      onClick={handleClick}
+      {...(isOverlay ? {} : { ...listeners, ...attributes })}
+    >
       <div class='flex items-center justify-between'>
         <Badge class={`badge-p${priority}`}>P{priority}</Badge>
         <span class='font-mono text-xs text-tertiary'>{id}</span>

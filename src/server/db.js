@@ -48,6 +48,7 @@ import { homedir } from 'node:os'
  *   commentsFor: (issueId: string) => Promise<Comment[]>
  *   searchIssues: (query: string) => Promise<Issue[]>
  *   allLabels: () => Promise<{ issue_id: string, label: string }[]>
+ *   updateIssueStatus: (id: string, status: string) => Promise<void>
  *   close: () => Promise<void>
  * }} Db
  */
