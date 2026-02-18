@@ -4,7 +4,7 @@ const ALIVE = "status <> 'tombstone' AND deleted_at IS NULL"
 
 /** @param {string} path @returns {Promise<import('./db.js').Db>} */
 export const openSqliteDb = async (path) => {
-  const db = new Database(path, { readonly: true })
+  const db = new Database(path)
   db.pragma('journal_mode = WAL')
 
   const stmts = {
@@ -64,6 +64,10 @@ export const openSqliteDb = async (path) => {
        WHERE ${ALIVE}
          AND (title LIKE ? OR description LIKE ? OR notes LIKE ?)
        ORDER BY priority, created_at`
+    ),
+
+    updateStatus: db.prepare(
+      `UPDATE issues SET status = ?, updated_at = ?, closed_at = ? WHERE id = ?`
     )
   }
 
@@ -95,6 +99,12 @@ export const openSqliteDb = async (path) => {
     searchIssues: async (query) => {
       const pattern = `%${query}%`
       return /** @type {import('./db.js').Issue[]} */ (stmts.searchIssues.all(pattern, pattern, pattern))
+    },
+
+    updateIssueStatus: async (id, status) => {
+      const now = new Date().toISOString()
+      const closedAt = status === 'closed' ? now : null
+      stmts.updateStatus.run(status, now, closedAt, id)
     },
 
     close: async () => db.close()

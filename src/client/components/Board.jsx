@@ -1,4 +1,7 @@
+import { useState } from 'preact/hooks'
+import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core'
 import { Card } from './Card.jsx'
+import { DroppableColumn } from './DroppableColumn.jsx'
 import { FilterBar } from './FilterBar.jsx'
 import { selectIssue } from '../router.js'
 import { useIssues } from '../hooks/useIssues.js'
@@ -32,9 +35,18 @@ const ClosedRecencyToggle = () => (
   </div>
 )
 
+const COLUMNS = [
+  { key: 'open', label: 'Open' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'closed', label: 'Closed' }
+]
+
 export const Board = () => {
   const { issues, loading } = useIssues('/api/issues')
   const { issues: blockedList } = useIssues('/api/issues/blocked')
+
+  const [activeId, setActiveId] = useState(null)
+  const [optimisticMoves, setOptimisticMoves] = useState(new Map())
 
   const blockedMap = new Map(blockedList.map(i => [i.id, i.blocked_by_count]))
 
@@ -45,17 +57,13 @@ export const Board = () => {
 
   const filtered = useFilteredIssues(enriched)
 
-  const columns = [
-    { key: 'open', label: 'Open' },
-    { key: 'in_progress', label: 'In Progress' },
-    { key: 'closed', label: 'Closed' }
-  ]
+  const effectiveStatus = (issue) => optimisticMoves.get(issue.id) ?? issue.status
 
   const sorted = Object.fromEntries(
-    columns.map(col => [
+    COLUMNS.map(col => [
       col.key,
       filtered
-        .filter(i => i.status === col.key)
+        .filter(i => effectiveStatus(i) === col.key)
         .sort((a, b) => a.priority - b.priority || new Date(a.created_at) - new Date(b.created_at))
     ])
   )
@@ -65,26 +73,101 @@ export const Board = () => {
     closed: closedWithinDays(sorted.closed, closedDays.value)
   }
 
+  const activeIssue = activeId ? enriched.find(i => i.id === activeId) : null
+
+  const handleDragStart = ({ active }) => {
+    setActiveId(active.id)
+  }
+
+  const handleDragEnd = async ({ active, over }) => {
+    setActiveId(null)
+
+    if (!over) return
+
+    const issueId = active.id
+    const newStatus = over.id
+    const issue = enriched.find(i => i.id === issueId)
+    if (!issue) return
+
+    const currentStatus = optimisticMoves.get(issueId) ?? issue.status
+    if (currentStatus === newStatus) return
+
+    setOptimisticMoves(prev => {
+      const next = new Map(prev)
+      next.set(issueId, newStatus)
+      return next
+    })
+
+    try {
+      const res = await fetch(`/api/issues/${issueId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (!res.ok) throw new Error('Update failed')
+    } catch {
+      setOptimisticMoves(prev => {
+        const next = new Map(prev)
+        next.delete(issueId)
+        return next
+      })
+    }
+
+    // Clear optimistic state after a short delay to let SSE refresh arrive
+    setTimeout(() => {
+      setOptimisticMoves(prev => {
+        const next = new Map(prev)
+        next.delete(issueId)
+        return next
+      })
+    }, 3000)
+  }
+
+  const handleDragCancel = () => {
+    setActiveId(null)
+  }
+
   if (loading) return <p class="text-secondary">Loading...</p>
 
   return (
     <>
       <FilterBar issues={enriched} />
-      <div class="board">
-        {columns.map(col => (
-          <div class="column" key={col.key}>
-            <div class="column-header">
-              <span>{col.label} ({grouped[col.key].length})</span>
-              {col.key === 'closed' && <ClosedRecencyToggle />}
-            </div>
-            <div class="column-cards">
+      <DndContext
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div class="board">
+          {COLUMNS.map(col => (
+            <DroppableColumn
+              key={col.key}
+              col={col}
+              count={grouped[col.key].length}
+              headerExtra={col.key === 'closed' ? <ClosedRecencyToggle /> : null}
+            >
               {grouped[col.key].map(issue => (
-                <Card key={issue.id} issue={issue} onClick={selectIssue} />
+                <Card
+                  key={issue.id}
+                  issue={issue}
+                  onClick={selectIssue}
+                  isDragging={activeId === issue.id}
+                />
               ))}
+            </DroppableColumn>
+          ))}
+        </div>
+        <DragOverlay>
+          {activeIssue ? (
+            <div class="card-drag-overlay">
+              <Card issue={activeIssue} isOverlay />
+              {activeIssue.blocked_by_count > 0 && (
+                <div class="drag-blocked-warning">Blocked issue</div>
+              )}
             </div>
-          </div>
-        ))}
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </>
   )
 }

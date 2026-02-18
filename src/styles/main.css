@@ -1224,3 +1224,36 @@
 .dep-svg-edge {
   pointer-events: none;
 }
+
+/* Drag and Drop */
+
+.column-drop-active {
+  outline: 2px dashed var(--color-accent-primary);
+  outline-offset: -2px;
+  background: rgba(88, 166, 255, 0.03);
+}
+
+.card-dragging {
+  opacity: 0.3;
+}
+
+.card-drag-overlay {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transform: rotate(2deg);
+  cursor: grabbing;
+}
+
+.card-drag-overlay .card {
+  cursor: grabbing;
+}
+
+.drag-blocked-warning {
+  padding: 4px 8px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--color-p1-text);
+  background: var(--color-p1-bg);
+  border: 1px solid var(--color-p1-border);
+  border-radius: 0 0 6px 6px;
+  text-align: center;
+}

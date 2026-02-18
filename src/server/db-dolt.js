@@ -90,6 +90,15 @@ export const openDoltDb = async (config) => {
       )
     },
 
+    updateIssueStatus: async (id, status) => {
+      const now = new Date().toISOString()
+      const closedAt = status === 'closed' ? now : null
+      await pool.query(
+        'UPDATE issues SET status = ?, updated_at = ?, closed_at = ? WHERE id = ?',
+        [status, now, closedAt, id]
+      )
+    },
+
     close: async () => { await pool.end() }
   })
 }

@@ -90,6 +90,17 @@ export const issueRoutes = (db) => {
     return c.json({ data, count: data.length })
   })
 
+  router.patch('/issues/:id/status', async (c) => {
+    const id = c.req.param('id')
+    const { status } = await c.req.json()
+    const valid = ['open', 'in_progress', 'closed']
+    if (!valid.includes(status)) return c.json({ error: 'Invalid status' }, 400)
+    const issue = await db.issueById(id)
+    if (!issue) return c.json({ error: 'Not found' }, 404)
+    await db.updateIssueStatus(id, status)
+    return c.json({ ok: true })
+  })
+
   router.get('/health', (c) => c.json({ status: 'ok' }))
 
   return router
