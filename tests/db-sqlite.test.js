@@ -22,10 +22,9 @@ describe('openSqliteDb', () => {
   })
 
   describe('allIssues', () => {
-    it('returns all non-deleted non-tombstone issues', async () => {
+    it('returns all issues', async () => {
       const issues = await db.allIssues()
       const ids = issues.map((i) => i.id)
-      expect(ids).not.toContain('deleted-1')
       expect(ids).toEqual(expect.arrayContaining(['issue-1', 'issue-2', 'issue-3', 'issue-4', 'issue-5']))
       expect(issues).toHaveLength(5)
     })
@@ -45,11 +44,8 @@ describe('openSqliteDb', () => {
       expect(issue).toMatchObject({ id: 'issue-1', title: 'First issue' })
     })
 
-    it.each([
-      ['non-existent id', 'no-such-id'],
-      ['deleted issue', 'deleted-1'],
-    ])('returns undefined for %s', async (_label, id) => {
-      expect(await db.issueById(id)).toBeUndefined()
+    it('returns undefined for non-existent id', async () => {
+      expect(await db.issueById('no-such-id')).toBeUndefined()
     })
   })
 
@@ -60,13 +56,7 @@ describe('openSqliteDb', () => {
       expect(ids).not.toContain('issue-5')
     })
 
-    it('excludes deleted issues', async () => {
-      const ready = await db.readyIssues()
-      const ids = ready.map((i) => i.id)
-      expect(ids).not.toContain('deleted-1')
-    })
-
-    it('includes non-blocked alive issues', async () => {
+    it('includes non-blocked issues', async () => {
       const ready = await db.readyIssues()
       const ids = ready.map((i) => i.id)
       expect(ids).toContain('issue-1')
@@ -85,12 +75,6 @@ describe('openSqliteDb', () => {
       const blocked = await db.blockedIssues()
       const issue5 = blocked.find((i) => i.id === 'issue-5')
       expect(issue5.blocked_by_count).toBe(1)
-    })
-
-    it('excludes deleted issues', async () => {
-      const blocked = await db.blockedIssues()
-      const ids = blocked.map((i) => i.id)
-      expect(ids).not.toContain('deleted-1')
     })
   })
 
@@ -175,11 +159,6 @@ describe('openSqliteDb', () => {
     ])('matches against %s', async (_field, query, expectedIds) => {
       const results = await db.searchIssues(query)
       expect(results.map((i) => i.id)).toEqual(expectedIds)
-    })
-
-    it('excludes deleted issues from results', async () => {
-      const results = await db.searchIssues('Gone')
-      expect(results).toEqual([])
     })
 
     it('returns empty array for no matches', async () => {

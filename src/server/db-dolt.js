@@ -1,7 +1,5 @@
 import mysql from 'mysql2/promise'
 
-const ALIVE = "status <> 'tombstone' AND deleted_at IS NULL"
-
 /** @param {{ host?: string, port?: number, user?: string, password?: string, database?: string }} config */
 export const openDoltDb = async (config) => {
   const pool = mysql.createPool({
@@ -30,40 +28,40 @@ export const openDoltDb = async (config) => {
 
   return /** @type {import('./db.js').Db} */ ({
     allIssues: () =>
-      queryAll(`SELECT * FROM issues WHERE ${ALIVE} ORDER BY priority, created_at`),
+      queryAll('SELECT * FROM issues ORDER BY priority, created_at'),
 
     issueById: (id) =>
-      queryOne(`SELECT * FROM issues WHERE id = ? AND ${ALIVE}`, [id]),
+      queryOne('SELECT * FROM issues WHERE id = ?', [id]),
 
     readyIssues: () =>
-      queryAll(`SELECT * FROM ready_issues WHERE ${ALIVE} ORDER BY priority, created_at`),
+      queryAll('SELECT * FROM ready_issues ORDER BY priority, created_at'),
 
     blockedIssues: () =>
-      queryAll(`SELECT * FROM blocked_issues WHERE ${ALIVE} ORDER BY blocked_by_count DESC, priority, created_at`),
+      queryAll('SELECT * FROM blocked_issues ORDER BY blocked_by_count DESC, priority, created_at'),
 
     dependenciesFor: async (issueId) => ({
       blockedBy: await queryAll(
         `SELECT i.* FROM issues i
          JOIN dependencies d ON i.id = d.depends_on_id
-         WHERE d.issue_id = ? AND d.type = 'blocks' AND ${ALIVE}`,
+         WHERE d.issue_id = ? AND d.type = 'blocks'`,
         [issueId]
       ),
       blocks: await queryAll(
         `SELECT i.* FROM issues i
          JOIN dependencies d ON i.id = d.issue_id
-         WHERE d.depends_on_id = ? AND d.type = 'blocks' AND ${ALIVE}`,
+         WHERE d.depends_on_id = ? AND d.type = 'blocks'`,
         [issueId]
       )
     }),
 
     epics: () =>
-      queryAll(`SELECT * FROM issues WHERE issue_type = 'epic' AND ${ALIVE} ORDER BY priority, created_at`),
+      queryAll("SELECT * FROM issues WHERE issue_type = 'epic' ORDER BY priority, created_at"),
 
     epicChildren: (epicId) =>
       queryAll(
         `SELECT i.* FROM issues i
          JOIN dependencies d ON i.id = d.issue_id
-         WHERE d.depends_on_id = ? AND d.type = 'parent-child' AND ${ALIVE}
+         WHERE d.depends_on_id = ? AND d.type = 'parent-child'
          ORDER BY i.priority, i.created_at`,
         [epicId]
       ),
@@ -83,8 +81,7 @@ export const openDoltDb = async (config) => {
       const pattern = `%${query}%`
       return queryAll(
         `SELECT * FROM issues
-         WHERE ${ALIVE}
-           AND (title LIKE ? OR description LIKE ? OR notes LIKE ?)
+         WHERE title LIKE ? OR description LIKE ? OR notes LIKE ?
          ORDER BY priority, created_at`,
         [pattern, pattern, pattern]
       )

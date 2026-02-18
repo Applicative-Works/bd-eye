@@ -1,7 +1,5 @@
 import Database from 'better-sqlite3'
 
-const ALIVE = "status <> 'tombstone' AND deleted_at IS NULL"
-
 /** @param {string} path @returns {Promise<import('./db.js').Db>} */
 export const openSqliteDb = async (path) => {
   const db = new Database(path)
@@ -9,41 +7,41 @@ export const openSqliteDb = async (path) => {
 
   const stmts = {
     allIssues: db.prepare(
-      `SELECT * FROM issues WHERE ${ALIVE} ORDER BY priority, created_at`
+      'SELECT * FROM issues ORDER BY priority, created_at'
     ),
 
     issueById: db.prepare(
-      `SELECT * FROM issues WHERE id = ? AND ${ALIVE}`
+      'SELECT * FROM issues WHERE id = ?'
     ),
 
     readyIssues: db.prepare(
-      `SELECT * FROM ready_issues WHERE ${ALIVE} ORDER BY priority, created_at`
+      'SELECT * FROM ready_issues ORDER BY priority, created_at'
     ),
 
     blockedIssues: db.prepare(
-      `SELECT * FROM blocked_issues WHERE ${ALIVE} ORDER BY blocked_by_count DESC, priority, created_at`
+      'SELECT * FROM blocked_issues ORDER BY blocked_by_count DESC, priority, created_at'
     ),
 
     blockedBy: db.prepare(
       `SELECT i.* FROM issues i
        JOIN dependencies d ON i.id = d.depends_on_id
-       WHERE d.issue_id = ? AND d.type = 'blocks' AND ${ALIVE}`
+       WHERE d.issue_id = ? AND d.type = 'blocks'`
     ),
 
     blocks: db.prepare(
       `SELECT i.* FROM issues i
        JOIN dependencies d ON i.id = d.issue_id
-       WHERE d.depends_on_id = ? AND d.type = 'blocks' AND ${ALIVE}`
+       WHERE d.depends_on_id = ? AND d.type = 'blocks'`
     ),
 
     epics: db.prepare(
-      `SELECT * FROM issues WHERE issue_type = 'epic' AND ${ALIVE} ORDER BY priority, created_at`
+      "SELECT * FROM issues WHERE issue_type = 'epic' ORDER BY priority, created_at"
     ),
 
     epicChildren: db.prepare(
       `SELECT i.* FROM issues i
        JOIN dependencies d ON i.id = d.issue_id
-       WHERE d.depends_on_id = ? AND d.type = 'parent-child' AND ${ALIVE}
+       WHERE d.depends_on_id = ? AND d.type = 'parent-child'
        ORDER BY i.priority, i.created_at`
     ),
 
@@ -61,13 +59,12 @@ export const openSqliteDb = async (path) => {
 
     searchIssues: db.prepare(
       `SELECT * FROM issues
-       WHERE ${ALIVE}
-         AND (title LIKE ? OR description LIKE ? OR notes LIKE ?)
+       WHERE title LIKE ? OR description LIKE ? OR notes LIKE ?
        ORDER BY priority, created_at`
     ),
 
     updateStatus: db.prepare(
-      `UPDATE issues SET status = ?, updated_at = ?, closed_at = ? WHERE id = ?`
+      'UPDATE issues SET status = ?, updated_at = ?, closed_at = ? WHERE id = ?'
     )
   }
 

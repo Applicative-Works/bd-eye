@@ -25,9 +25,9 @@ describe('openDoltDb', () => {
     const rows = [{ id: 'i-1', title: 'Test' }, { id: 'i-2', title: 'Other' }]
 
     it.each([
-      ['allIssues', [], /SELECT \* FROM issues WHERE/],
-      ['readyIssues', [], /SELECT \* FROM ready_issues WHERE/],
-      ['blockedIssues', [], /SELECT \* FROM blocked_issues WHERE/],
+      ['allIssues', [], /SELECT \* FROM issues ORDER BY/],
+      ['readyIssues', [], /SELECT \* FROM ready_issues ORDER BY/],
+      ['blockedIssues', [], /SELECT \* FROM blocked_issues ORDER BY/],
       ['epics', [], /issue_type = 'epic'/],
       ['allLabels', [], /SELECT issue_id, label FROM labels/],
     ])('%s() executes correct SQL pattern', async (method, args, pattern) => {

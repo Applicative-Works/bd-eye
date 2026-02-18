@@ -35,10 +35,9 @@ describe('GET /health', () => {
 })
 
 describe('GET /issues', () => {
-  it('returns all non-deleted issues with labels', async () => {
+  it('returns all issues with labels', async () => {
     const { body } = await get('/issues')
     expect(body.count).toBe(5)
-    expect(body.data.map((i) => i.id)).not.toContain('deleted-1')
     const issue1 = body.data.find((i) => i.id === 'issue-1')
     expect(issue1.labels).toEqual(['backend', 'urgent'])
   })
@@ -66,7 +65,6 @@ describe('GET /issues/ready', () => {
     const { body } = await get('/issues/ready')
     const ids = body.data.map((i) => i.id)
     expect(ids).not.toContain('issue-5')
-    expect(ids).not.toContain('deleted-1')
     expect(ids).toContain('issue-1')
   })
 
@@ -109,11 +107,6 @@ describe('GET /issues/:id', () => {
     const { status, body } = await get('/issues/nonexistent')
     expect(status).toBe(404)
     expect(body.error).toBe('Not found')
-  })
-
-  it('returns 404 for deleted issue', async () => {
-    const { status } = await get('/issues/deleted-1')
-    expect(status).toBe(404)
   })
 
   it('returns issue without labels as empty array', async () => {
@@ -204,8 +197,4 @@ describe('GET /search', () => {
     expect(body).toEqual({ data: [], count: 0 })
   })
 
-  it('excludes deleted issues from search', async () => {
-    const { body } = await get('/search?q=Gone')
-    expect(body.count).toBe(0)
-  })
 })
