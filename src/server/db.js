@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, statSync, lstatSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -108,6 +108,59 @@ export const doltConfig = (dbPath) => ({
   password: process.env.DOLT_PASSWORD ?? '',
   database: process.env.DOLT_DATABASE ?? (dbPath ? basename(dbPath) : '')
 })
+
+/**
+ * @typedef {{ id: string, name: string, path: string, type: 'sqlite' | 'dolt' }} BoardInfo
+ */
+
+/**
+ * Scan directories for beads projects. Does not follow symlinks.
+ * @param {string[]} scanRoots
+ * @param {string[]} excludePaths
+ * @returns {BoardInfo[]}
+ */
+export const discoverBoards = (scanRoots, excludePaths = []) => {
+  /** @type {BoardInfo[]} */
+  const boards = []
+  const excludeSet = new Set(excludePaths.map((p) => resolve(p)))
+
+  for (const root of scanRoots) {
+    const absRoot = resolve(root.replace(/^~/, homedir()))
+    if (!existsSync(absRoot)) continue
+
+    let entries
+    try { entries = readdirSync(absRoot) } catch { continue }
+
+    for (const entry of entries) {
+      const dir = join(absRoot, entry)
+      if (excludeSet.has(dir)) continue
+
+      // Don't follow symlinks
+      try {
+        if (lstatSync(dir).isSymbolicLink()) continue
+        if (!statSync(dir).isDirectory()) continue
+      } catch { continue }
+
+      const beadsDir = join(dir, '.beads')
+      if (!existsSync(beadsDir)) continue
+
+      const dbs = readdirSync(beadsDir).filter((/** @type {string} */ f) => f.endsWith('.db'))
+      if (dbs.length === 0) continue
+
+      const dbPath = join(beadsDir, dbs[0])
+      const dbType = detectDbType(dbPath)
+
+      boards.push({
+        id: entry,
+        name: entry,
+        path: dbPath,
+        type: dbType
+      })
+    }
+  }
+
+  return boards.sort((a, b) => a.name.localeCompare(b.name))
+}
 
 /** @param {string} [path] @returns {Promise<{ db: Db, dbType: 'sqlite' | 'dolt', dbPath: string }>} */
 export const openDb = async (path) => {

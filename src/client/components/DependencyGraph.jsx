@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
-import { selectedIssueId } from '../state.js'
+import { selectedIssueId, apiBase } from '../state.js'
 import { selectIssue } from '../router.js'
 
 /**
@@ -46,6 +46,7 @@ const DependencyNode = ({ issue, isSelected, hasBlockers }) => (
 const FocusView = ({ issueId }) => {
   const [deps, setDeps] = useState(/** @type {DependencyData|null} */ (null))
   const [loading, setLoading] = useState(false)
+  const base = apiBase.value
 
   useEffect(() => {
     if (!issueId) {
@@ -54,12 +55,12 @@ const FocusView = ({ issueId }) => {
     }
 
     setLoading(true)
-    fetch(`/api/issues/${issueId}/dependencies`)
+    fetch(`${base}/issues/${issueId}/dependencies`)
       .then(res => res.json())
       .then(({ data }) => setDeps(data))
       .catch(() => setDeps({ blockedBy: [], blocks: [] }))
       .finally(() => setLoading(false))
-  }, [issueId])
+  }, [issueId, base])
 
   const [selectedIssue, setSelectedIssue] = useState(/** @type {Issue|null} */ (null))
 
@@ -69,11 +70,11 @@ const FocusView = ({ issueId }) => {
       return
     }
 
-    fetch(`/api/issues/${issueId}`)
+    fetch(`${base}/issues/${issueId}`)
       .then(res => res.json())
       .then(({ data }) => setSelectedIssue(data))
       .catch(() => setSelectedIssue(null))
-  }, [issueId])
+  }, [issueId, base])
 
   if (!issueId) {
     return (
@@ -129,13 +130,14 @@ const FullGraphView = () => {
   const [blockedIssues, setBlockedIssues] = useState(/** @type {Set<string>} */ (new Set()))
   const [dependencies, setDependencies] = useState(/** @type {Map<string, string[]>} */ (new Map()))
   const [loading, setLoading] = useState(false)
+  const base = apiBase.value
 
   useEffect(() => {
     setLoading(true)
 
     Promise.all([
-      fetch('/api/issues').then(r => r.json()),
-      fetch('/api/issues/blocked').then(r => r.json())
+      fetch(`${base}/issues`).then(r => r.json()),
+      fetch(`${base}/issues/blocked`).then(r => r.json())
     ])
       .then(([issuesRes, blockedRes]) => {
         const allIssues = issuesRes.data || []
@@ -145,7 +147,7 @@ const FullGraphView = () => {
         setBlockedIssues(blocked)
 
         const depPromises = Array.from(blocked).map(id =>
-          fetch(`/api/issues/${id}/dependencies`)
+          fetch(`${base}/issues/${id}/dependencies`)
             .then(r => r.json())
             .then(({ data }) => ({
               id,
@@ -331,7 +333,7 @@ export const DependencyGraph = () => {
       return
     }
 
-    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    fetch(`${apiBase.value}/search?q=${encodeURIComponent(q)}`)
       .then(r => r.json())
       .then(({ data }) => setSearchResults(data || []))
       .catch(() => setSearchResults([]))
@@ -345,7 +347,7 @@ export const DependencyGraph = () => {
 
   useEffect(() => {
     if (selectedIssueId.value) {
-      fetch(`/api/issues/${selectedIssueId.value}`)
+      fetch(`${apiBase.value}/issues/${selectedIssueId.value}`)
         .then(r => r.json())
         .then(({ data }) => {
           if (data) {

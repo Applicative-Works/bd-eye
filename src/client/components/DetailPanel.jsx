@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
+import { apiBase } from '../state.js'
 
 /**
  * @typedef {Object} Comment
@@ -48,9 +49,10 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
       setError(null)
 
       try {
+        const base = apiBase.value
         const [issueRes, depsRes] = await Promise.all([
-          fetch(`/api/issues/${issueId}`),
-          fetch(`/api/issues/${issueId}/dependencies`)
+          fetch(`${base}/issues/${issueId}`),
+          fetch(`${base}/issues/${issueId}/dependencies`)
         ])
 
         if (!issueRes.ok) throw new Error('Failed to fetch issue')

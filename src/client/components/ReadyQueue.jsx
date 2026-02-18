@@ -2,9 +2,10 @@ import { useState, useEffect } from 'preact/hooks'
 import { useIssues } from '../hooks/useIssues.js'
 import { Badge, PillBadge } from './Badge.jsx'
 import { selectIssue } from '../router.js'
+import { apiBase } from '../state.js'
 
 export const ReadyQueue = () => {
-  const { issues, loading } = useIssues('/api/issues/ready')
+  const { issues, loading } = useIssues(`${apiBase.value}/issues/ready`)
   const [selectedIdx, setSelectedIdx] = useState(-1)
 
   useEffect(() => {

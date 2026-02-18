@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { useLiveUpdates } from './useLiveUpdates.js'
 
-export const useIssues = (endpoint = '/api/issues') => {
+export const useIssues = (endpoint = '/issues') => {
   const [issues, setIssues] = useState([])
   const [loading, setLoading] = useState(true)
 

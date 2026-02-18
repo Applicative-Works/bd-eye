@@ -14,7 +14,7 @@ beforeAll(async () => {
   seedIssues(syncDb)
   db = await openSqliteDb(dbPath)
   app = new Hono()
-  app.route('/api', issueRoutes(db))
+  app.route('/api/boards/:boardId', issueRoutes(() => db))
 })
 
 afterAll(async () => {
@@ -23,7 +23,7 @@ afterAll(async () => {
 })
 
 const get = async (path) => {
-  const res = await app.request(`/api${path}`)
+  const res = await app.request(`/api/boards/test${path}`)
   return { status: res.status, body: await res.json() }
 }
 

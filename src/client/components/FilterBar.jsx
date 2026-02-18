@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { filters } from '../state.js'
+import { filters, apiBase } from '../state.js'
 import { FilterChip } from './FilterChip.jsx'
 
 export const FilterBar = ({ issues }) => {
@@ -8,11 +8,11 @@ export const FilterBar = ({ issues }) => {
   const dropdownRef = useRef(null)
 
   useEffect(() => {
-    fetch('/api/labels')
+    fetch(`${apiBase.value}/labels`)
       .then(r => r.json())
       .then(({ data }) => setLabels(data))
       .catch(() => setLabels([]))
-  }, [])
+  }, [apiBase.value])
 
   useEffect(() => {
     const handleClickOutside = (e) => {

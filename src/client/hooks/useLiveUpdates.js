@@ -1,12 +1,16 @@
 import { useEffect } from 'preact/hooks'
+import { apiBase } from '../state.js'
 
 /**
  * @param {() => void} onRefresh - called when the server signals a DB change
  */
 export const useLiveUpdates = (onRefresh) => {
   useEffect(() => {
-    const source = new EventSource('/api/events')
+    const base = apiBase.value
+    if (!base || base.endsWith('/_')) return
+
+    const source = new EventSource(`${base}/events`)
     source.onmessage = () => onRefresh()
     return () => source.close()
-  }, [onRefresh])
+  }, [onRefresh, apiBase.value])
 }
