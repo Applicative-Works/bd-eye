@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { Badge } from './Badge.jsx'
 import { selectIssue } from '../router.js'
 import { useLiveUpdates } from '../hooks/useLiveUpdates.js'
+import { apiBase } from '../state.js'
 
 const statusIcon = (status) => {
   if (status === 'closed') return '✓'
@@ -70,12 +71,14 @@ export const EpicExplorer = () => {
   const [children, setChildren] = useState({})
   const [loading, setLoading] = useState(true)
 
+  const base = apiBase.value
+
   const fetchEpics = useCallback(async () => {
-    const res = await fetch('/api/epics')
+    const res = await fetch(`${base}/epics`)
     const { data } = await res.json()
     setEpics(data)
     setLoading(false)
-  }, [])
+  }, [base])
 
   useEffect(() => { fetchEpics() }, [fetchEpics])
   useLiveUpdates(fetchEpics)
@@ -87,7 +90,7 @@ export const EpicExplorer = () => {
     } else {
       next.add(epicId)
       if (!children[epicId]) {
-        const res = await fetch(`/api/epics/${epicId}/children`)
+        const res = await fetch(`${base}/epics/${epicId}/children`)
         const { data } = await res.json()
         setChildren(prev => ({ ...prev, [epicId]: data }))
       }

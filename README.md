@@ -1,9 +1,10 @@
 # bd-eye
 
-A read-only visual dashboard for [Beads](https://github.com/steveyegge/beads) issue databases. It supports both SQLite and [Dolt](https://www.dolthub.com/) backends, watching for changes and pushing live updates to all connected browsers via Server-Sent Events.
+A read-only visual dashboard for [Beads](https://github.com/steveyegge/beads) issue databases. It auto-discovers all Beads projects under a configurable root directory and lets you switch between them from a single running instance. It supports both SQLite and [Dolt](https://www.dolthub.com/) backends, watching for changes and pushing live updates to all connected browsers via Server-Sent Events.
 
 ## Features
 
+- **Multi-board support**: auto-discovers Beads projects and provides a dropdown to switch between them
 - Kanban board with issues grouped by status
 - Ready queue showing unblocked issues available for work
 - Epic explorer with child-issue progress bars
@@ -11,7 +12,7 @@ A read-only visual dashboard for [Beads](https://github.com/steveyegge/beads) is
 - Full-text search across titles, descriptions, and notes
 - Live updates: the UI refreshes automatically when the database changes
 - Filtering by priority, type, assignee, and label
-- Deep-linkable views and issue selection via hash routing
+- Deep-linkable views and issue selection via hash routing (`#/:board/:view`)
 
 ## Prerequisites
 
@@ -34,25 +35,44 @@ npm run dev
 
 This starts the API server on port 3333 and the Vite dev server on port 5174 with API requests proxied automatically.
 
+## Configuration
+
+bd-eye is configured via `~/.bd-eye.json`. A default config is created automatically on first run:
+
+```json
+{
+  "scanRoots": ["~/workspace"],
+  "lastUsedBoard": "my-project",
+  "excludePaths": []
+}
+```
+
+| Key              | Description                                                  | Default          |
+|------------------|--------------------------------------------------------------|------------------|
+| `scanRoots`      | Directories to scan for Beads projects (each top-level child with a `.beads/*.db` is a board) | `["~/workspace"]` |
+| `lastUsedBoard`  | Board to open when no board is specified in the URL          | First alphabetically |
+| `excludePaths`   | Absolute paths to skip during scanning                       | `[]`             |
+
+### Board discovery
+
+At startup, bd-eye scans each directory in `scanRoots` one level deep, looking for child directories that contain `.beads/*.db`. Each match becomes a board, identified by its directory name. Symlinks are not followed. The server opens a read-only connection to every discovered board and maintains a per-board file watcher and SSE stream — switching boards in the UI is instant with no reconnection lag.
+
+If no boards are found, the UI displays a helpful message prompting you to run `bd init` in a project.
+
 ## Environment Variables
 
 | Variable        | Description                                      | Default                                            |
 |-----------------|--------------------------------------------------|----------------------------------------------------|
 | `PORT`          | HTTP port for the production server              | `3333`                                             |
-| `BEADS_DB`      | Path to the Beads database (`.db` file or Dolt repo directory) | Auto-discovered from `.beads/` up the directory tree |
 | `DOLT_HOST`     | Dolt SQL server hostname                         | `127.0.0.1`                                        |
 | `DOLT_PORT`     | Dolt SQL server port                             | `3306`                                             |
 | `DOLT_USER`     | Dolt SQL server username                         | `root`                                             |
 | `DOLT_PASSWORD`  | Dolt SQL server password                         | *(empty)*                                          |
 | `DOLT_DATABASE` | Dolt database name                               | Auto-discovered if the server has exactly one user database |
 
-### Database detection
-
-Setting any `DOLT_*` environment variable activates Dolt mode — no `BEADS_DB` is needed. When no `DOLT_*` variables are set, `BEADS_DB` is resolved by walking up the directory tree looking for `.beads/*.db`; if the resolved path is a directory with a `.dolt` subdirectory, Dolt mode is used with the database name derived from the directory name.
-
 ### Dolt setup
 
-Start a Dolt SQL server, then point bd-eye at it:
+For boards backed by Dolt instead of SQLite, start a Dolt SQL server and set the corresponding environment variables:
 
 ```sh
 dolt sql-server --host 127.0.0.1 --port 3307 --data-dir .beads/dolt
@@ -68,7 +88,7 @@ If the server hosts exactly one user database, it is selected automatically. If 
 DOLT_PORT=3307 DOLT_DATABASE=beads_omnisearch npm start
 ```
 
-Live updates work by polling `HASHOF('HEAD')` every 2 seconds — any Dolt commit triggers a refresh.
+Setting any `DOLT_*` variable activates Dolt mode for boards whose `.beads/` directory contains a `.dolt` subdirectory. Live updates work by polling `HASHOF('HEAD')` every 2 seconds — any Dolt commit triggers a refresh.
 
 ## Keyboard Shortcuts
 
@@ -81,6 +101,16 @@ Live updates work by polling `HASHOF('HEAD')` every 2 seconds — any Dolt commi
 | `Ctrl/Cmd + K` | Open search          |
 | `Escape`       | Close detail panel   |
 
+## URL Routing
+
+Views are addressed as `#/:board/:view`, where `:board` is the project directory name and `:view` is one of `board`, `ready`, `epics`, or `deps`. Issue selection is appended as a query parameter:
+
+```
+http://localhost:3333/#/my-project/board?issue=proj-42
+```
+
+When you open bd-eye without a hash, it redirects to your last-used board. Switching boards via the nav dropdown resets filters and selection state.
+
 ## Architecture
 
 ```mermaid
@@ -88,38 +118,47 @@ graph TD
     subgraph Client ["Client (Preact + Signals)"]
         Router[Hash Router]
         State[Signals State]
+        BoardSwitcher[Board Switcher]
         Views[Board / Ready / Epics / Deps]
         Detail[Detail Panel]
         Search[Search Modal]
-        SSE[EventSource]
+        SSE[EventSource per board]
     end
 
     subgraph Server ["Server (Hono + Node)"]
-        API[REST API]
-        Stream[SSE Endpoint]
-        Watcher[Watcher Factory]
+        Discovery[Board Discovery]
+        ConnMap["Connection Map (board → db)"]
+        API["REST API (/api/boards/:id/*)"]
+        Stream[SSE Endpoints]
+        Watchers[Per-board Watchers]
     end
 
-    subgraph Database
-        SQLite[(SQLite DB)]
-        Dolt[(Dolt SQL Server)]
+    subgraph Databases
+        DB1[(project-a .beads/)]
+        DB2[(project-b .beads/)]
+        DBn[(project-n .beads/)]
     end
 
+    Discovery -->|scan ~/workspace| ConnMap
     Router --> State
+    BoardSwitcher --> Router
     State --> Views
     State --> Detail
     Views --> API
     Detail --> API
     Search --> API
     SSE --> Stream
-    Watcher -->|chokidar| SQLite
-    Watcher -->|poll HASHOF HEAD| Dolt
-    Watcher -->|broadcast refresh| Stream
-    API -->|better-sqlite3 readonly| SQLite
-    API -->|mysql2/promise| Dolt
+    ConnMap --> API
+    ConnMap --> Watchers
+    Watchers -->|chokidar / poll| DB1
+    Watchers -->|chokidar / poll| DB2
+    Watchers -->|chokidar / poll| DBn
+    Watchers -->|broadcast refresh| Stream
 ```
 
-The server auto-detects the database type and opens it via the appropriate driver (better-sqlite3 for SQLite, mysql2 for Dolt). For SQLite, a chokidar file watcher monitors the database and its WAL/SHM files. For Dolt, a poller checks `HASHOF('HEAD')` every 2 seconds. On any change, a `refresh` event is broadcast over SSE to all connected clients. The Preact client uses `@preact/signals` for reactive state and a hash-based router to drive four views, each fetching data from the API and re-fetching on SSE notifications.
+At startup the server scans configured roots and opens a connection to every discovered Beads database (better-sqlite3 for SQLite, mysql2 for Dolt), storing them in a map keyed by board name. Each board gets its own file watcher (chokidar for SQLite, `HASHOF('HEAD')` polling for Dolt) and SSE stream. All API routes are scoped under `/api/boards/:boardId/`, so the client includes the current board name in every request.
+
+The Preact client uses `@preact/signals` for reactive state, including a computed `apiBase` signal that updates when you switch boards. A hash-based router parses the board and view from the URL, and all data hooks re-fetch automatically when the board changes.
 
 ## License
 

@@ -19,11 +19,17 @@ const attachLabels = async (db, issues) => {
   return issues.map((issue) => ({ ...issue, labels: map.get(issue.id) ?? [] }))
 }
 
-/** @param {import('../db.js').Db} db */
-export const issueRoutes = (db) => {
+/** @param {(boardId: string) => import('../db.js').Db | undefined} getDb */
+export const issueRoutes = (getDb) => {
   const router = new Hono()
 
+  /** @param {string | undefined} boardId @returns {import('../db.js').Db | undefined} */
+  const resolveDb = (boardId) => boardId ? getDb(boardId) : undefined
+
   router.get('/issues', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
+
     const status = c.req.query('status')
     const priority = c.req.query('priority')
     const type = c.req.query('type')
@@ -41,16 +47,22 @@ export const issueRoutes = (db) => {
   })
 
   router.get('/issues/ready', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const data = await attachLabels(db, await db.readyIssues())
     return c.json({ data, count: data.length })
   })
 
   router.get('/issues/blocked', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const data = await attachLabels(db, await db.blockedIssues())
     return c.json({ data, count: data.length })
   })
 
   router.get('/issues/:id', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const issue = await db.issueById(c.req.param('id'))
     if (!issue) return c.json({ error: 'Not found' }, 404)
 
@@ -60,11 +72,15 @@ export const issueRoutes = (db) => {
   })
 
   router.get('/issues/:id/dependencies', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const data = await db.dependenciesFor(c.req.param('id'))
     return c.json({ data })
   })
 
   router.get('/epics', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const epics = await db.epics()
     const data = await Promise.all(epics.map(async (epic) => {
       const children = await db.epicChildren(epic.id)
@@ -75,15 +91,21 @@ export const issueRoutes = (db) => {
   })
 
   router.get('/epics/:id/children', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const data = await attachLabels(db, await db.epicChildren(c.req.param('id')))
     return c.json({ data, count: data.length })
   })
 
   router.get('/labels', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     return c.json({ data: await db.labels() })
   })
 
   router.get('/search', async (c) => {
+    const db = resolveDb(c.req.param('boardId'))
+    if (!db) return c.json({ error: 'Board not found' }, 404)
     const q = c.req.query('q')
     if (!q) return c.json({ data: [], count: 0 })
     const data = await attachLabels(db, await db.searchIssues(q))

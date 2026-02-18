@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { Badge } from './Badge.jsx'
+import { apiBase } from '../state.js'
 
 /**
  * @param {{ onClose: () => void, onSelect: (id: string) => void }} props
@@ -15,7 +16,7 @@ export const SearchModal = ({ onClose, onSelect }) => {
   useEffect(() => {
     if (!query.trim()) { setResults([]); return }
     const timer = setTimeout(async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      const res = await fetch(`${apiBase.value}/search?q=${encodeURIComponent(query)}`)
       const { data } = await res.json()
       setResults(data)
       setSelectedIndex(0)

@@ -3,7 +3,7 @@ import { FilterBar } from './FilterBar.jsx'
 import { selectIssue } from '../router.js'
 import { useIssues } from '../hooks/useIssues.js'
 import { useFilteredIssues } from '../hooks/useFilteredIssues.js'
-import { closedDays } from '../state.js'
+import { closedDays, apiBase } from '../state.js'
 
 const RECENCY_OPTIONS = [
   { label: '1d', days: 1 },
@@ -33,8 +33,8 @@ const ClosedRecencyToggle = () => (
 )
 
 export const Board = () => {
-  const { issues, loading } = useIssues('/api/issues')
-  const { issues: blockedList } = useIssues('/api/issues/blocked')
+  const { issues, loading } = useIssues(`${apiBase.value}/issues`)
+  const { issues: blockedList } = useIssues(`${apiBase.value}/issues/blocked`)
 
   const blockedMap = new Map(blockedList.map(i => [i.id, i.blocked_by_count]))
 
