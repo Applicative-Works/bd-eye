@@ -294,4 +294,25 @@ describe('App', () => {
     expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
     removeFakeColumns()
   })
+
+  test('l skips empty columns', () => {
+    render(<App />)
+    addFakeColumns(['A-1'], [], ['C-1'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="C-1"]')).toHaveClass('card-focused')
+    removeFakeColumns()
+  })
+
+  test('h skips empty columns', () => {
+    render(<App />)
+    addFakeColumns(['A-1'], [], ['C-1'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="C-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+    removeFakeColumns()
+  })
 })

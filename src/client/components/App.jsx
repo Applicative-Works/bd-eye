@@ -47,10 +47,18 @@ export const App = () => {
         const focused = cards[prev]
         const currentCol = focused?.closest('.column')
         const colIndex = currentCol ? columns.indexOf(currentCol) : (delta > 0 ? -1 : columns.length)
-        const targetColIndex = Math.max(0, Math.min(columns.length - 1, colIndex + delta))
-        const targetCol = columns[targetColIndex]
-        const targetCards = Array.from(targetCol.querySelectorAll('.card[data-card-id]'))
-        if (targetCards.length === 0) return prev
+
+        let targetCol = null
+        let targetCards = []
+        for (let i = colIndex + delta; i >= 0 && i < columns.length; i += delta) {
+          const colCards = Array.from(columns[i].querySelectorAll('.card[data-card-id]'))
+          if (colCards.length > 0) {
+            targetCol = columns[i]
+            targetCards = colCards
+            break
+          }
+        }
+        if (!targetCol) return prev
 
         const rowInCol = focused && currentCol ? Array.from(currentCol.querySelectorAll('.card[data-card-id]')).indexOf(focused) : 0
         const targetCard = targetCards[Math.min(rowInCol, targetCards.length - 1)]
