@@ -1,6 +1,8 @@
+import { useRef, useEffect } from 'preact/hooks';
 import { useDraggable } from '@dnd-kit/core';
 import { Badge, PillBadge } from './Badge.jsx';
 import { CopyableId } from './CopyableId.jsx';
+import { changedIds } from '../state.js';
 
 /**
  * @typedef {{
@@ -55,6 +57,23 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
     ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
     : undefined;
 
+  const cardRef = useRef(null)
+  const isHighlighted = changedIds.value.has(id)
+
+  useEffect(() => {
+    if (!isHighlighted || !cardRef.current) return
+    const el = cardRef.current
+    el.classList.remove('card-highlighted')
+    void el.offsetWidth
+    el.classList.add('card-highlighted')
+    const cleanup = () => {
+      el.classList.remove('card-highlighted')
+      changedIds.value = new Set([...changedIds.value].filter(x => x !== id))
+    }
+    el.addEventListener('animationend', cleanup, { once: true })
+    return () => el.removeEventListener('animationend', cleanup)
+  }, [isHighlighted, id])
+
   const days = status !== 'closed' ? ageInDays(issue.updated_at) : 0
 
   const cardClass = [
@@ -73,7 +92,7 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
   return (
     <div
       class={cardClass}
-      ref={isOverlay ? undefined : setNodeRef}
+      ref={el => { cardRef.current = el; if (!isOverlay) setNodeRef(el) }}
       style={style}
       data-card-id={id}
       onClick={handleClick}

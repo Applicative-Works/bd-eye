@@ -30,8 +30,8 @@ describe('polling', () => {
     const mockEnd = vi.fn()
     const mockQuery = vi.fn(async () => {
       callCount++
-      if (callCount === 1) return [[{ hash: 'aaa' }]]
-      return [[{ hash: 'bbb' }]]
+      if (callCount === 1) return [[{ latest: 'aaa' }]]
+      return [[{ latest: 'bbb' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
 
@@ -59,7 +59,7 @@ describe('polling', () => {
     const mockQuery = vi.fn(async () => {
       callCount++
       if (callCount >= 2) throw new Error('stop')
-      return [[{ hash: 'aaa' }]]
+      return [[{ latest: 'aaa' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
 
@@ -99,8 +99,8 @@ describe('polling', () => {
     const mockQuery = vi.fn(async () => {
       callCount++
       if (callCount === 1) throw new Error('query failed')
-      if (callCount === 2) return [[{ hash: 'aaa' }]]
-      return [[{ hash: 'bbb' }]]
+      if (callCount === 2) return [[{ latest: 'aaa' }]]
+      return [[{ latest: 'bbb' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
 
@@ -137,8 +137,8 @@ describe('polling', () => {
     const mockEnd = vi.fn()
     const mockQuery = vi.fn(async () => {
       callCount++
-      if (callCount === 1) return [[{ hash: 'aaa' }]]
-      return [[{ hash: 'bbb' }]]
+      if (callCount === 1) return [[{ latest: 'aaa' }]]
+      return [[{ latest: 'bbb' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
 

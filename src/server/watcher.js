@@ -6,7 +6,7 @@
  */
 export const createWatcher = (config, registry, onChange) => {
   /** @type {Map<string, string>} */
-  const lastHashes = new Map()
+  const lastTimestamps = new Map()
   let stopped = false
 
   const poll = async () => {
@@ -24,11 +24,11 @@ export const createWatcher = (config, registry, onChange) => {
           const projects = await registry.listProjects()
           for (const { name } of projects) {
             try {
-              const [rows] = await conn.query(`SELECT DOLT_HASHOF_DB('${name}') AS hash`)
-              const hash = /** @type {any[]} */ (rows)[0]?.hash ?? ''
-              const lastHash = lastHashes.get(name) ?? ''
-              if (lastHash && hash !== lastHash) onChange(JSON.stringify({ project: name }))
-              lastHashes.set(name, hash)
+              const [rows] = await conn.query(`SELECT MAX(updated_at) AS latest FROM \`${name}\`.issues`)
+              const latest = String(/** @type {any[]} */ (rows)[0]?.latest ?? '')
+              const prev = lastTimestamps.get(name) ?? ''
+              if (prev && latest !== prev) onChange(JSON.stringify({ project: name }))
+              lastTimestamps.set(name, latest)
             } catch { /* skip individual db errors */ }
           }
         } catch { /* query failed, retry next cycle */ }
