@@ -55,7 +55,21 @@ vi.mock('../../src/client/components/UpdatedAt.jsx', () => ({
 }))
 
 import { App } from '../../src/client/components/App.jsx'
-import { initRouter, navigate, clearSelection } from '../../src/client/router.js'
+import { initRouter, navigate, clearSelection, selectIssue } from '../../src/client/router.js'
+
+const addFakeCards = (...ids) => {
+  ids.forEach(id => {
+    const card = document.createElement('div')
+    card.className = 'card'
+    card.dataset.cardId = id
+    card.scrollIntoView = vi.fn()
+    document.body.appendChild(card)
+  })
+}
+
+const removeFakeCards = () => {
+  document.querySelectorAll('.card[data-card-id]').forEach(c => c.remove())
+}
 
 beforeEach(() => {
   currentView.value = 'board'
@@ -136,5 +150,61 @@ describe('App', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }))
     expect(navigate).not.toHaveBeenCalled()
     document.body.removeChild(input)
+  })
+
+  test('j key focuses next card', () => {
+    render(<App />)
+    addFakeCards('P-1', 'P-2', 'P-3')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="P-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="P-2"]')).toHaveClass('card-focused')
+    expect(document.querySelector('[data-card-id="P-1"]')).not.toHaveClass('card-focused')
+    removeFakeCards()
+  })
+
+  test('k key focuses previous card', () => {
+    render(<App />)
+    addFakeCards('P-1', 'P-2', 'P-3')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }))
+    expect(document.querySelector('[data-card-id="P-1"]')).toHaveClass('card-focused')
+    removeFakeCards()
+  })
+
+  test('j does not go past last card', () => {
+    render(<App />)
+    addFakeCards('P-1', 'P-2')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="P-2"]')).toHaveClass('card-focused')
+    removeFakeCards()
+  })
+
+  test('Enter opens detail panel for focused card', () => {
+    render(<App />)
+    addFakeCards('P-1', 'P-2')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(selectIssue).toHaveBeenCalledWith('P-1')
+    removeFakeCards()
+  })
+
+  test('Enter does nothing when no card is focused', () => {
+    render(<App />)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(selectIssue).not.toHaveBeenCalled()
+  })
+
+  test('Escape clears card focus', () => {
+    render(<App />)
+    addFakeCards('P-1')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="P-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(document.querySelector('[data-card-id="P-1"]')).not.toHaveClass('card-focused')
+    removeFakeCards()
   })
 })

@@ -407,6 +407,10 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--color-accent-primary);
 }
 
+.card-focused {
+  box-shadow: 0 0 0 2px var(--color-accent-primary);
+}
+
 .card-blocked {
   border-left: 3px solid var(--color-blocked-border);
   background: linear-gradient(

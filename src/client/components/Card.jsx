@@ -74,6 +74,7 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
       class={cardClass}
       ref={isOverlay ? undefined : setNodeRef}
       style={style}
+      data-card-id={id}
       onClick={handleClick}
       {...(isOverlay ? {} : { ...listeners, ...attributes })}
     >

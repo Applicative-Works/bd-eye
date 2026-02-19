@@ -10,11 +10,27 @@ import { DependencyGraph } from './DependencyGraph.jsx'
 import { DetailPanel } from './DetailPanel.jsx'
 import { SearchModal } from './SearchModal.jsx'
 
+const getVisibleCards = () => Array.from(document.querySelectorAll('.card[data-card-id]'))
+
 export const App = () => {
   const [showSearch, setShowSearch] = useState(false)
+  const [focusedIndex, setFocusedIndex] = useState(-1)
 
   useEffect(() => {
     initRouter()
+
+    const moveFocus = (delta) => {
+      const cards = getVisibleCards()
+      if (cards.length === 0) return
+
+      setFocusedIndex(prev => {
+        const next = Math.max(0, Math.min(cards.length - 1, prev + delta))
+        cards.forEach(c => c.classList.remove('card-focused'))
+        cards[next]?.classList.add('card-focused')
+        cards[next]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        return next
+      })
+    }
 
     const handleKeyDown = (e) => {
       const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
@@ -27,6 +43,23 @@ export const App = () => {
       }
 
       switch (e.key) {
+        case 'j':
+          e.preventDefault()
+          moveFocus(1)
+          break
+        case 'k':
+          e.preventDefault()
+          moveFocus(-1)
+          break
+        case 'Enter': {
+          const cards = getVisibleCards()
+          const focused = cards.find(c => c.classList.contains('card-focused'))
+          if (focused) {
+            e.preventDefault()
+            selectIssue(focused.dataset.cardId)
+          }
+          break
+        }
         case 'b':
           navigate('board')
           break
@@ -41,6 +74,8 @@ export const App = () => {
           break
         case 'Escape':
           clearSelection()
+          setFocusedIndex(-1)
+          getVisibleCards().forEach(c => c.classList.remove('card-focused'))
           break
       }
     }
