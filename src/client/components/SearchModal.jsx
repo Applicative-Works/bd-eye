@@ -11,8 +11,14 @@ export const SearchModal = ({ onClose, onSelect }) => {
   const [results, setResults] = useState([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef(null)
+  const resultsRef = useRef(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  useEffect(() => {
+    const active = resultsRef.current?.children[selectedIndex]
+    active?.scrollIntoView?.({ block: 'nearest' })
+  }, [selectedIndex])
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return }
@@ -28,14 +34,10 @@ export const SearchModal = ({ onClose, onSelect }) => {
   const handleKeyDown = (e) => {
     switch (e.key) {
       case 'ArrowDown':
-      case 'j':
-        if (e.key === 'j' && e.target.tagName === 'INPUT') break
         e.preventDefault()
         setSelectedIndex(i => Math.min(i + 1, results.length - 1))
         break
       case 'ArrowUp':
-      case 'k':
-        if (e.key === 'k' && e.target.tagName === 'INPUT') break
         e.preventDefault()
         setSelectedIndex(i => Math.max(i - 1, 0))
         break
@@ -52,8 +54,8 @@ export const SearchModal = ({ onClose, onSelect }) => {
   }
 
   return (
-    <div class='search-overlay' onClick={onClose} onKeyDown={handleKeyDown}>
-      <div class='search-modal' onClick={e => e.stopPropagation()}>
+    <div class='search-overlay' onClick={onClose}>
+      <div class='search-modal' onClick={e => e.stopPropagation()} onKeyDown={handleKeyDown}>
         <input
           ref={inputRef}
           class='search-input'
@@ -62,7 +64,7 @@ export const SearchModal = ({ onClose, onSelect }) => {
           value={query}
           onInput={e => setQuery(e.target.value)}
         />
-        <div class='search-results'>
+        <div class='search-results' ref={resultsRef}>
           {results.map((issue, i) => (
             <div
               key={issue.id}

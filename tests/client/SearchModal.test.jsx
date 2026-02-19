@@ -58,7 +58,7 @@ describe('SearchModal', () => {
   test('calls onClose on Escape key', () => {
     const onClose = vi.fn()
     renderModal({ onClose })
-    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...').closest('.search-overlay'), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...'), { key: 'Escape' })
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -108,7 +108,7 @@ describe('SearchModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Fix login bug')).toBeInTheDocument()
     })
-    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...').closest('.search-overlay'), { key: 'Enter' })
+    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...'), { key: 'Enter' })
     expect(onSelect).toHaveBeenCalledWith('PROJ-1')
     expect(onClose).toHaveBeenCalled()
   })
@@ -134,7 +134,7 @@ describe('SearchModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Fix login bug')).toBeInTheDocument()
     })
-    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...').closest('.search-overlay'), { key: 'ArrowDown' })
+    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...'), { key: 'ArrowDown' })
     expect(screen.getByText('Add dashboard').closest('.search-result')).toHaveClass('search-result-active')
   })
 
@@ -145,8 +145,8 @@ describe('SearchModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Fix login bug')).toBeInTheDocument()
     })
-    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...').closest('.search-overlay'), { key: 'ArrowDown' })
-    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...').closest('.search-overlay'), { key: 'ArrowUp' })
+    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...'), { key: 'ArrowDown' })
+    fireEvent.keyDown(screen.getByPlaceholderText('Search issues...'), { key: 'ArrowUp' })
     expect(screen.getByText('Fix login bug').closest('.search-result')).toHaveClass('search-result-active')
   })
 
