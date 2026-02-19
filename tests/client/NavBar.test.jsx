@@ -16,7 +16,7 @@ const TABS = [
 describe('NavBar', () => {
   test('renders the title', () => {
     const { container } = render(<NavBar currentView="board" onNavigate={() => {}} />)
-    expect(container.querySelector('.nav-title')).toHaveTextContent('bd-eye')
+    expect(container.querySelector('.nav-title')).toHaveTextContent('Beady Eye')
   })
 
   test('renders keyboard shortcut hint', () => {
