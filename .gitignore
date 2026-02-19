@@ -6,6 +6,7 @@ dist/
 
 # Database
 *.db
+config.yaml
 
 # Environment
 .env
