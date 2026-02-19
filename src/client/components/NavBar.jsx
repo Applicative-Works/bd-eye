@@ -3,7 +3,8 @@ const TABS = [
   { id: 'ready', label: 'Ready' },
   { id: 'epics', label: 'Epics' },
   { id: 'deps', label: 'Deps' },
-  { id: 'activity', label: 'Activity' }
+  { id: 'activity', label: 'Activity' },
+  { id: 'throughput', label: 'Throughput' },
 ]
 
 /** @param {{ currentView: string, onNavigate: (view: string) => void }} props */

@@ -6,7 +6,8 @@ const ROUTES = {
   '#/ready': 'ready',
   '#/epics': 'epics',
   '#/deps': 'deps',
-  '#/activity': 'activity'
+  '#/activity': 'activity',
+  '#/throughput': 'throughput',
 }
 
 export const initRouter = () => {

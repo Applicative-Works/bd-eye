@@ -8,6 +8,7 @@ import { ReadyQueue } from './ReadyQueue.jsx'
 import { EpicExplorer } from './EpicExplorer.jsx'
 import { DependencyGraph } from './DependencyGraph.jsx'
 import { ActivityFeed } from './ActivityFeed.jsx'
+import { ThroughputChart } from './ThroughputChart.jsx'
 import { DetailPanel } from './DetailPanel.jsx'
 import { SearchModal } from './SearchModal.jsx'
 
@@ -126,6 +127,9 @@ export const App = () => {
         case 'a':
           navigate('activity')
           break
+        case 't':
+          navigate('throughput')
+          break
         case 'Escape':
           clearSelection()
           setFocusedIndex(-1)
@@ -149,6 +153,7 @@ export const App = () => {
         {view === 'epics' && <EpicExplorer />}
         {view === 'deps' && <DependencyGraph />}
         {view === 'activity' && <ActivityFeed />}
+        {view === 'throughput' && <ThroughputChart />}
       </main>
       {selectedIssueId.value && (
         <DetailPanel
