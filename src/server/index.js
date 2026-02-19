@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
@@ -50,6 +51,12 @@ const config = doltConfig()
 const registry = createRegistry(config)
 
 const watcher = createWatcher(config, registry, (event) => broadcast(event))
+
+const gitUserName = (() => {
+  try { return execSync('git config user.name', { encoding: 'utf-8' }).trim() } catch { return null }
+})()
+
+app.get('/api/config', (c) => c.json({ currentUser: gitUserName }))
 
 app.route('/api', projectRoutes(registry))
 app.route('/api/projects/:project', issueRoutes((name) => registry.connectionFor(name)))

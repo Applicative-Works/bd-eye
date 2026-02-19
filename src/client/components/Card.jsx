@@ -1,7 +1,8 @@
-import { useRef, useEffect } from 'preact/hooks';
+import { useRef, useEffect, useState } from 'preact/hooks';
 import { useDraggable } from '@dnd-kit/core';
 import { Badge, PillBadge } from './Badge.jsx';
 import { CopyableId } from './CopyableId.jsx';
+import { AssigneePicker } from './AssigneePicker.jsx';
 import { changedIds } from '../state.js';
 import { formatDuration, issueAgeMs, durationTier } from '../cycleTime.js';
 
@@ -25,7 +26,7 @@ import { formatDuration, issueAgeMs, durationTier } from '../cycleTime.js';
 /**
  * @param {{ issue: CardIssue, onClick?: (id: string) => void, isDragging?: boolean, isOverlay?: boolean, thresholds?: { median: number, p75: number } | null }} props
  */
-export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, thresholds = null }) => {
+export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, thresholds = null, assignees = [], onAssigneeChange }) => {
   const {
     id,
     title,
@@ -64,6 +65,15 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, th
     el.addEventListener('animationend', cleanup, { once: true })
     return () => el.removeEventListener('animationend', cleanup)
   }, [isHighlighted, id])
+
+  const [showPicker, setShowPicker] = useState(false)
+  const assigneeRef = useRef(null)
+
+  const handleAssigneeClick = (e) => {
+    if (!onAssigneeChange) return
+    e.stopPropagation()
+    setShowPicker(true)
+  }
 
   const ageMs = issueAgeMs(issue)
   const tier = durationTier(ageMs, thresholds)
@@ -106,9 +116,24 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, th
       </div>
 
       <div class='flex items-center justify-between'>
-        <span class={`text-xs ${assignee ? 'text-secondary' : 'text-tertiary'}`}>
+        <span
+          ref={assigneeRef}
+          class={`text-xs card-assignee ${assignee ? 'text-secondary' : 'text-tertiary'}${onAssigneeChange ? ' card-assignee-clickable' : ''}`}
+          onClick={handleAssigneeClick}
+          role={onAssigneeChange ? 'button' : undefined}
+          tabindex={onAssigneeChange ? 0 : undefined}
+        >
           {assignee || 'unassigned'}
         </span>
+        {showPicker && (
+          <AssigneePicker
+            assignees={assignees}
+            currentAssignee={assignee}
+            onSelect={(a) => onAssigneeChange(id, a)}
+            anchorRef={assigneeRef}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
         <div class='flex items-center gap-2'>
           {blocked_by_count > 0 && (
             <span

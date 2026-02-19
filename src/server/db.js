@@ -45,6 +45,7 @@
  *   searchIssues: (query: string) => Promise<Issue[]>
  *   allLabels: () => Promise<{ issue_id: string, label: string }[]>
  *   updateIssueStatus: (id: string, status: string) => Promise<void>
+ *   updateIssueAssignee: (id: string, assignee: string | null) => Promise<void>
  *   close: () => Promise<void>
  * }} Db
  */

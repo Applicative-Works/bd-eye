@@ -27,6 +27,7 @@ export const columnSortOrders = signal(storedSortOrders || { open: 'priority', i
 columnSortOrders.subscribe(v => localStorage.setItem('bd-eye.sortOrders', JSON.stringify(v)))
 export const swimlaneGrouping = signal(null)
 export const cycleTimeThresholds = signal(null)
+export const currentUser = signal(null)
 
 const storedWipLimits = (() => {
   try { return JSON.parse(localStorage.getItem('wipLimits')) } catch { return null }

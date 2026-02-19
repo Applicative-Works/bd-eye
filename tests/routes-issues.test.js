@@ -49,6 +49,7 @@ const db = {
     )
   },
   updateIssueStatus: async () => {},
+  updateIssueAssignee: async () => {},
   close: async () => {},
 }
 
@@ -234,5 +235,40 @@ describe('GET /search', () => {
   it('returns empty when query matches nothing', async () => {
     const { body } = await get('/search?q=zzzznonexistent')
     expect(body).toEqual({ data: [], count: 0 })
+  })
+})
+
+const patch = async (path, body) => {
+  const res = await app.request(`/api/projects/testdb${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return { status: res.status, body: await res.json() }
+}
+
+describe('PATCH /issues/:id/assignee', () => {
+  it('updates assignee and returns ok', async () => {
+    const { status, body } = await patch('/issues/issue-1/assignee', { assignee: 'alice' })
+    expect(status).toBe(200)
+    expect(body).toEqual({ ok: true })
+  })
+
+  it('accepts null to unassign', async () => {
+    const { status, body } = await patch('/issues/issue-2/assignee', { assignee: null })
+    expect(status).toBe(200)
+    expect(body).toEqual({ ok: true })
+  })
+
+  it('returns 404 for non-existent issue', async () => {
+    const { status, body } = await patch('/issues/nonexistent/assignee', { assignee: 'alice' })
+    expect(status).toBe(404)
+    expect(body.error).toBe('Not found')
+  })
+
+  it('returns 400 for invalid assignee type', async () => {
+    const { status, body } = await patch('/issues/issue-1/assignee', { assignee: 123 })
+    expect(status).toBe(400)
+    expect(body.error).toBe('Invalid assignee')
   })
 })

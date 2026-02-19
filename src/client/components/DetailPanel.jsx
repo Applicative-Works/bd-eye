@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { Markdown } from './Markdown.jsx'
 import { CopyableId } from './CopyableId.jsx'
+import { AssigneePicker } from './AssigneePicker.jsx'
 import { apiUrl } from '../projectUrl.js'
 import { cycleTimeThresholds } from '../state.js'
 import { formatDuration, issueAgeMs, durationTier } from '../cycleTime.js'
@@ -46,6 +47,9 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
   const [dependencies, setDependencies] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showAssigneePicker, setShowAssigneePicker] = useState(false)
+  const [assignees, setAssignees] = useState([])
+  const assigneeRef = useRef(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +70,7 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
 
         setIssue(issueData.data)
         setDependencies(depsData.data)
+        setShowAssigneePicker(false)
       } catch (err) {
         setError(err.message)
       } finally {
@@ -75,6 +80,28 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
 
     fetchData()
   }, [issueId])
+
+  useEffect(() => {
+    fetch(apiUrl('/issues'))
+      .then(r => r.json())
+      .then(({ data }) => {
+        const names = [...new Set(data.filter(i => i.assignee).map(i => i.assignee))].sort()
+        setAssignees(names)
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleAssigneeChange = async (_, assignee) => {
+    setIssue(prev => ({ ...prev, assignee }))
+    try {
+      const res = await fetch(apiUrl(`/issues/${issueId}/assignee`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignee })
+      })
+      if (!res.ok) throw new Error('Update failed')
+    } catch { /* SSE will refresh */ }
+  }
 
   if (loading) {
     return (
@@ -119,8 +146,23 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
 
         <div class='flex gap-2 items-center flex-wrap text-sm' style='margin-bottom: 24px'>
           <span class='text-secondary'>
-            Assignee: <span class='text-primary'>{issue.assignee || 'unassigned'}</span>
+            Assignee: <span
+              ref={assigneeRef}
+              class='text-primary detail-assignee-clickable'
+              role='button'
+              tabindex={0}
+              onClick={() => setShowAssigneePicker(true)}
+            >{issue.assignee || 'unassigned'}</span>
           </span>
+          {showAssigneePicker && (
+            <AssigneePicker
+              assignees={assignees}
+              currentAssignee={issue.assignee}
+              onSelect={(a) => handleAssigneeChange(issueId, a)}
+              anchorRef={assigneeRef}
+              onClose={() => setShowAssigneePicker(false)}
+            />
+          )}
           {issue.labels?.length > 0 && (
             <>
               <span class='text-tertiary'>•</span>

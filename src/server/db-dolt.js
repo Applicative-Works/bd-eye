@@ -96,6 +96,14 @@ export const openDoltDb = async (config) => {
       )
     },
 
+    updateIssueAssignee: async (id, assignee) => {
+      const now = new Date().toISOString()
+      await pool.query(
+        'UPDATE issues SET assignee = ?, updated_at = ? WHERE id = ?',
+        [assignee, now, id]
+      )
+    },
+
     close: async () => { await pool.end() }
   })
 }

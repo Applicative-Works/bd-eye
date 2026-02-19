@@ -116,6 +116,17 @@ export const issueRoutes = (dbFor) => {
     return c.json({ ok: true })
   })
 
+  router.patch('/issues/:id/assignee', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
+    const id = c.req.param('id')
+    const { assignee } = await c.req.json()
+    if (assignee !== null && typeof assignee !== 'string') return c.json({ error: 'Invalid assignee' }, 400)
+    const issue = await db.issueById(id)
+    if (!issue) return c.json({ error: 'Not found' }, 404)
+    await db.updateIssueAssignee(id, assignee || null)
+    return c.json({ ok: true })
+  })
+
   router.get('/health', (c) => c.json({ status: 'ok' }))
 
   return router

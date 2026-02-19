@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import { currentView, selectedIssueId, projectList, projectsLoading } from '../state.js'
+import { currentView, selectedIssueId, projectList, projectsLoading, currentUser } from '../state.js'
 import { initRouter, navigate, clearSelection, selectIssue } from '../router.js'
 import { useProjects } from '../hooks/useProjects.js'
 import { NavBar } from './NavBar.jsx'
@@ -20,6 +20,10 @@ export const App = () => {
   const [focusedIndex, setFocusedIndex] = useState(-1)
 
   useProjects()
+
+  useEffect(() => {
+    fetch('/api/config').then(r => r.json()).then(c => { currentUser.value = c.currentUser }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     initRouter()
