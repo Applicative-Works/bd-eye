@@ -98,7 +98,7 @@ const buildSwimlanes = (columnIssues, grouping) => {
   return sortedKeys.map(k => ({ key: k, label: groupLabel(k, grouping), issues: lanes.get(k) }))
 }
 
-const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle, thresholds }) => {
+const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle, thresholds, assignees, onAssigneeChange }) => {
   const totalCount = columns.reduce((n, col) => n + lane.issues[col.key].length, 0)
   return (
     <div class={`swim-row${collapsed ? ' swim-row-collapsed' : ''}`} role="rowgroup" aria-label={`${lane.label} — ${totalCount} issues`}>
@@ -117,7 +117,7 @@ const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle, t
           {lane.issues[col.key].length === 0
             ? <div class="swim-cell-empty">No issues</div>
             : lane.issues[col.key].map(issue => (
-                <Card key={issue.id} issue={issue} onClick={selectIssue} isDragging={activeId === issue.id} thresholds={thresholds} />
+                <Card key={issue.id} issue={issue} onClick={selectIssue} isDragging={activeId === issue.id} thresholds={thresholds} assignees={assignees} onAssigneeChange={onAssigneeChange} />
               ))
           }
         </DroppableCell>
@@ -148,6 +148,22 @@ export const Board = () => {
     cycleTimeThresholds.value = t
     return t
   }, [enriched])
+
+  const assignees = useMemo(() => {
+    const names = new Set(enriched.filter(i => i.assignee).map(i => i.assignee))
+    return [...names].sort()
+  }, [enriched])
+
+  const handleAssigneeChange = async (issueId, assignee) => {
+    try {
+      const res = await fetch(apiUrl(`/issues/${issueId}/assignee`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignee })
+      })
+      if (!res.ok) throw new Error('Update failed')
+    } catch { /* SSE will refresh */ }
+  }
 
   const filtered = useFilteredIssues(enriched)
 
@@ -272,6 +288,8 @@ export const Board = () => {
                 collapsed={collapsedLanes.has(lane.key)}
                 onToggle={() => toggleLane(lane.key)}
                 thresholds={thresholds}
+                assignees={assignees}
+                onAssigneeChange={handleAssigneeChange}
               />
             ))}
           </div>
@@ -296,6 +314,8 @@ export const Board = () => {
                     onClick={selectIssue}
                     isDragging={activeId === issue.id}
                     thresholds={thresholds}
+                    assignees={assignees}
+                    onAssigneeChange={handleAssigneeChange}
                   />
                 ))}
               </DroppableColumn>

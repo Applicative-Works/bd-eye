@@ -47,7 +47,7 @@ Kanban board for beads issue tracker, backed by Dolt databases.
 
 When working on a beads issue:
 
-1. `bd update <id> --status=in_progress` before starting work
+1. `bd update <id> --claim` before starting work
 2. Commit code with a meaningful message
 3. `bd close <id>` when done
 4. `bd export && bd sync` to update the JSONL and sync
