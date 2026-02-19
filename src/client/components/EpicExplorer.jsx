@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { Badge } from './Badge.jsx'
+import { CopyableId } from './CopyableId.jsx'
 import { selectIssue } from '../router.js'
 import { useLiveUpdates } from '../hooks/useLiveUpdates.js'
 
@@ -28,7 +29,7 @@ const EpicRow = ({ epic, isExpanded, children_, onToggle, onSelectIssue }) => {
       <div class="epic-header" onClick={onToggle}>
         <span class="epic-chevron">{isExpanded ? '▼' : '▶'}</span>
         <span class="text-sm">🎯</span>
-        <span class="font-mono text-xs text-tertiary">{epic.id}</span>
+        <CopyableId id={epic.id} class="font-mono text-xs text-tertiary" />
         <span class="text-sm font-medium flex-1 truncate">{epic.title}</span>
         <span class="text-xs text-tertiary">
           ({epic.closed_count}/{epic.child_count} closed)
@@ -53,7 +54,7 @@ const EpicRow = ({ epic, isExpanded, children_, onToggle, onSelectIssue }) => {
               <span style={{ color: statusIconColor(child.status) }}>
                 {statusIcon(child.status)}
               </span>
-              <span class="font-mono text-xs text-tertiary">{child.id}</span>
+              <CopyableId id={child.id} class="font-mono text-xs text-tertiary" />
               <span class="text-sm flex-1 truncate">{child.title}</span>
               <Badge class={`badge-p${child.priority}`}>P{child.priority}</Badge>
             </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { Markdown } from './Markdown.jsx'
+import { CopyableId } from './CopyableId.jsx'
 
 /**
  * @typedef {Object} Comment
@@ -103,7 +104,7 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
   return (
     <div class='panel'>
       <div class='panel-header'>
-        <span class='font-mono text-xl'>{issue.id}</span>
+        <CopyableId id={issue.id} class='font-mono text-xl' />
         <span class={`badge badge-p${issue.priority}`}>P{issue.priority}</span>
         <span class={`badge badge-${issue.status.replace(' ', '-')}`}>{issue.status}</span>
         <span class={`badge badge-${issue.issue_type}`}>{issue.issue_type}</span>

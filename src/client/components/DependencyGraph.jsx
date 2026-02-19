@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useReducer } from 'preact/hooks'
 import dagre from 'dagre'
 import { selectedIssueId } from '../state.js'
 import { selectIssue } from '../router.js'
+import { CopyableId } from './CopyableId.jsx'
 
 /**
  * @typedef {Object} Issue
@@ -37,7 +38,7 @@ const DependencyNode = ({ issue, isSelected, hasBlockers }) => (
     style={{ borderColor: getNodeBorderColor(issue, hasBlockers) }}
   >
     <div class="dep-node-header">
-      <span class="dep-node-id font-mono">{issue.id}</span>
+      <CopyableId id={issue.id} class="dep-node-id font-mono" />
       {isSelected && <span class="dep-node-label">SELECTED</span>}
     </div>
     <div class="dep-node-title">{issue.title}</div>
@@ -384,7 +385,7 @@ const FullGraphView = () => {
       <button class="dep-fit-btn" onClick={fitToView} title="Fit to view">⊞</button>
       {tooltip && (
         <div class="dep-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-          <div class="dep-tooltip-id">{tooltip.issue.id}</div>
+          <div class="dep-tooltip-id"><CopyableId id={tooltip.issue.id} /></div>
           <div class="dep-tooltip-title">{tooltip.issue.title}</div>
           <div class="dep-tooltip-status">{tooltip.issue.status}</div>
         </div>
@@ -476,7 +477,7 @@ export const DependencyGraph = () => {
                   class={`dep-search-result${i === selectedIndex ? ' dep-search-result-active' : ''}`}
                   onClick={() => selectFromSearch(issue.id)}
                 >
-                  <span class="font-mono text-sm">{issue.id}</span>
+                  <CopyableId id={issue.id} class="font-mono text-sm" />
                   <span class="text-sm truncate">{issue.title}</span>
                 </div>
               ))}

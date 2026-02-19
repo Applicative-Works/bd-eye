@@ -1522,3 +1522,16 @@
   color: #68d391;
   transition: none;
 }
+
+/* Copyable ID */
+
+.copyable-id {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background 100ms ease;
+}
+
+.copyable-id:hover {
+  background: var(--color-bg-tertiary);
+}

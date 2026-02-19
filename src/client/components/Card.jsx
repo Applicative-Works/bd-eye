@@ -1,5 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { Badge, PillBadge } from './Badge.jsx';
+import { CopyableId } from './CopyableId.jsx';
 
 /**
  * @typedef {{
@@ -80,7 +81,7 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
     >
       <div class='flex items-center justify-between'>
         <Badge class={`badge-p${priority}`}>P{priority}</Badge>
-        <span class='font-mono text-xs text-tertiary'>{id}</span>
+        <CopyableId id={id} class='font-mono text-xs text-tertiary' />
       </div>
 
       <div class='font-medium text-sm line-clamp-2'>{title}</div>

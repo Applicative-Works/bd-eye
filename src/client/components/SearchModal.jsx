@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { Badge } from './Badge.jsx'
+import { CopyableId } from './CopyableId.jsx'
 
 /**
  * @param {{ onClose: () => void, onSelect: (id: string) => void }} props
@@ -67,7 +68,7 @@ export const SearchModal = ({ onClose, onSelect }) => {
               class={`search-result ${i === selectedIndex ? 'search-result-active' : ''}`}
               onClick={() => { onSelect(issue.id); onClose() }}
             >
-              <span class='font-mono text-xs text-tertiary'>{issue.id}</span>
+              <CopyableId id={issue.id} class='font-mono text-xs text-tertiary' />
               <span class='text-sm flex-1 truncate'>{issue.title}</span>
               <Badge class={`badge-p${issue.priority}`}>P{issue.priority}</Badge>
               <Badge class={`badge-${issue.status.replace('_', '-')}`}>{issue.status}</Badge>

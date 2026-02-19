@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useIssues } from '../hooks/useIssues.js'
 import { Badge, PillBadge } from './Badge.jsx'
+import { CopyableId } from './CopyableId.jsx'
 import { selectIssue } from '../router.js'
 
 export const ReadyQueue = () => {
@@ -64,7 +65,7 @@ export const ReadyQueue = () => {
               onClick={() => selectIssue(issue.id)}
             >
               <td><Badge class={`badge-p${issue.priority}`}>P{issue.priority}</Badge></td>
-              <td class="font-mono text-xs">{issue.id}</td>
+              <td><CopyableId id={issue.id} class="font-mono text-xs" /></td>
               <td class="text-sm">{issue.title}</td>
               <td><PillBadge class={`badge-${issue.issue_type}`}>{issue.issue_type}</PillBadge></td>
               <td class="text-xs text-secondary">{issue.assignee || 'unassigned'}</td>
