@@ -118,4 +118,26 @@ describe('Card', () => {
     const { container } = render(<Card issue={baseIssue} isDragging={true} />)
     expect(container.firstChild).toHaveClass('card-dragging')
   })
+
+  test.each([
+    [3, 'card-age-aging'],
+    [7, 'card-age-old'],
+    [14, 'card-age-stale'],
+  ])('has %d-day-old card age class %s', (daysAgo, expectedClass) => {
+    const updated = new Date(Date.now() - daysAgo * 86400000).toISOString()
+    const { container } = render(<Card issue={issueWith({ updated_at: updated })} />)
+    expect(container.firstChild).toHaveClass(expectedClass)
+  })
+
+  test('no age class for fresh cards (< 3 days)', () => {
+    const updated = new Date(Date.now() - 1 * 86400000).toISOString()
+    const { container } = render(<Card issue={issueWith({ updated_at: updated })} />)
+    expect(container.firstChild.className).not.toMatch(/card-age/)
+  })
+
+  test('no age class for closed cards', () => {
+    const updated = new Date(Date.now() - 30 * 86400000).toISOString()
+    const { container } = render(<Card issue={issueWith({ status: 'closed', updated_at: updated })} />)
+    expect(container.firstChild.className).not.toMatch(/card-age/)
+  })
 })

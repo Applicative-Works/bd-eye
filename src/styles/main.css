@@ -425,6 +425,18 @@
   );
 }
 
+.card-age-aging {
+  border-top: 2px solid #6e5a1e;
+}
+
+.card-age-old {
+  border-top: 2px solid #a06820;
+}
+
+.card-age-stale {
+  border-top: 2px solid #c4692a;
+}
+
 .column {
   display: flex;
   flex-direction: column;

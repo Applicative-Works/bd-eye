@@ -12,8 +12,21 @@ import { Badge, PillBadge } from './Badge.jsx';
  *   labels?: string[]
  *   blocked_by_count?: number
  *   blocks_count?: number
+ *   updated_at?: string
  * }} CardIssue
  */
+
+const ageInDays = (dateStr) => {
+  if (!dateStr) return 0
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
+}
+
+const ageClass = (days) => {
+  if (days >= 14) return 'card-age-stale'
+  if (days >= 7) return 'card-age-old'
+  if (days >= 3) return 'card-age-aging'
+  return ''
+}
 
 /**
  * @param {{ issue: CardIssue, onClick?: (id: string) => void, isDragging?: boolean, isOverlay?: boolean }} props
@@ -41,9 +54,12 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
     ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
     : undefined;
 
+  const days = status !== 'closed' ? ageInDays(issue.updated_at) : 0
+
   const cardClass = [
     'card',
     blocked_by_count > 0 ? 'card-blocked' : status === 'open' && blocked_by_count === 0 ? 'card-ready' : '',
+    ageClass(days),
     isDragging ? 'card-dragging' : '',
   ].filter(Boolean).join(' ');
 
