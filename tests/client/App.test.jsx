@@ -315,4 +315,28 @@ describe('App', () => {
     expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
     removeFakeColumns()
   })
+
+  test.each([
+    ['ArrowDown', 'j'],
+    ['ArrowUp', 'k'],
+    ['ArrowRight', 'l'],
+    ['ArrowLeft', 'h'],
+  ])('%s works the same as %s', (arrowKey, viKey) => {
+    render(<App />)
+    addFakeColumns(['A-1', 'A-2'], ['B-1', 'B-2'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: arrowKey }))
+    const focusedAfterArrow = document.querySelector('.card-focused')
+
+    document.querySelectorAll('.card-focused').forEach(c => c.classList.remove('card-focused'))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: viKey }))
+    const focusedAfterVi = document.querySelector('.card-focused')
+
+    expect(focusedAfterArrow?.dataset.cardId).toBe(focusedAfterVi?.dataset.cardId)
+    removeFakeColumns()
+  })
 })

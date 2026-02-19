@@ -82,18 +82,22 @@ export const App = () => {
 
       switch (e.key) {
         case 'j':
+        case 'ArrowDown':
           e.preventDefault()
           moveFocus(1)
           break
         case 'k':
+        case 'ArrowUp':
           e.preventDefault()
           moveFocus(-1)
           break
         case 'l':
+        case 'ArrowRight':
           e.preventDefault()
           moveColumn(1)
           break
         case 'h':
+        case 'ArrowLeft':
           e.preventDefault()
           moveColumn(-1)
           break
