@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
+import { lastUpdated } from '../state.js'
 import { useLiveUpdates } from './useLiveUpdates.js'
 
 export const useIssues = (endpoint = '/api/issues') => {
@@ -10,6 +11,7 @@ export const useIssues = (endpoint = '/api/issues') => {
     const { data } = await res.json()
     setIssues(data)
     setLoading(false)
+    lastUpdated.value = new Date()
   }, [endpoint])
 
   useEffect(() => { fetch_() }, [fetch_])

@@ -1,6 +1,13 @@
 /** @vitest-environment jsdom */
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/preact'
+import { signal } from '@preact/signals'
+
+const lastUpdated = signal(null)
+
+vi.mock('../../src/client/state.js', () => ({
+  get lastUpdated() { return lastUpdated },
+}))
 
 vi.mock('../../src/client/hooks/useLiveUpdates.js', () => ({
   useLiveUpdates: vi.fn()
@@ -16,6 +23,7 @@ const mockData = [
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  lastUpdated.value = null
   globalThis.fetch = vi.fn(() =>
     Promise.resolve({
       json: () => Promise.resolve({ data: mockData })
@@ -46,6 +54,12 @@ describe('useIssues', () => {
   test('registers refetch callback with useLiveUpdates', () => {
     renderHook(() => useIssues())
     expect(useLiveUpdates).toHaveBeenCalledWith(expect.any(Function))
+  })
+
+  test('sets lastUpdated after fetch completes', async () => {
+    const { result } = renderHook(() => useIssues())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(lastUpdated.value).toBeInstanceOf(Date)
   })
 
   test('refetch reloads data', async () => {
