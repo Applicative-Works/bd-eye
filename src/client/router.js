@@ -5,7 +5,8 @@ const ROUTES = {
   '#/board': 'board',
   '#/ready': 'ready',
   '#/epics': 'epics',
-  '#/deps': 'deps'
+  '#/deps': 'deps',
+  '#/activity': 'activity'
 }
 
 export const initRouter = () => {

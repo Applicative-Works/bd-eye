@@ -11,6 +11,7 @@ const TABS = [
   { id: 'ready', label: 'Ready' },
   { id: 'epics', label: 'Epics' },
   { id: 'deps', label: 'Deps' },
+  { id: 'activity', label: 'Activity' },
 ]
 
 describe('NavBar', () => {
@@ -45,11 +46,12 @@ describe('NavBar', () => {
   test('non-active tabs do not have active class', () => {
     const { container } = render(<NavBar currentView="board" onNavigate={() => {}} />)
     const inactiveTabs = [...container.querySelectorAll('a.nav-tab:not(.nav-tab-active)')]
-    expect(inactiveTabs).toHaveLength(3)
+    expect(inactiveTabs).toHaveLength(4)
     const labels = inactiveTabs.map(t => t.textContent)
     expect(labels).toContain('Ready')
     expect(labels).toContain('Epics')
     expect(labels).toContain('Deps')
+    expect(labels).toContain('Activity')
   })
 
   test.each(TABS.map(t => [t.id, t.label]))(
