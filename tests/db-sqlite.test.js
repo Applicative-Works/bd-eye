@@ -153,6 +153,7 @@ describe('openSqliteDb', () => {
 
   describe('searchIssues', () => {
     it.each([
+      ['id', 'issue-1', ['issue-1']],
       ['title', 'First', ['issue-1']],
       ['description', 'Description two', ['issue-2']],
       ['notes', 'Some notes', ['issue-1']],

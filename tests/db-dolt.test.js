@@ -94,10 +94,11 @@ describe('openDoltDb', () => {
       const result = await db.searchIssues('test')
       expect(result).toEqual(rows)
       const [sql, params] = mockQuery.mock.calls.at(-1)
+      expect(sql).toMatch(/id LIKE \?/)
       expect(sql).toMatch(/title LIKE \?/)
       expect(sql).toMatch(/description LIKE \?/)
       expect(sql).toMatch(/notes LIKE \?/)
-      expect(params).toEqual(['%test%', '%test%', '%test%'])
+      expect(params).toEqual(['%test%', '%test%', '%test%', '%test%'])
     })
   })
 

@@ -59,7 +59,7 @@ export const openSqliteDb = async (path) => {
 
     searchIssues: db.prepare(
       `SELECT * FROM issues
-       WHERE title LIKE ? OR description LIKE ? OR notes LIKE ?
+       WHERE id LIKE ? OR title LIKE ? OR description LIKE ? OR notes LIKE ?
        ORDER BY priority, created_at`
     ),
 
@@ -95,7 +95,7 @@ export const openSqliteDb = async (path) => {
 
     searchIssues: async (query) => {
       const pattern = `%${query}%`
-      return /** @type {import('./db.js').Issue[]} */ (stmts.searchIssues.all(pattern, pattern, pattern))
+      return /** @type {import('./db.js').Issue[]} */ (stmts.searchIssues.all(pattern, pattern, pattern, pattern))
     },
 
     updateIssueStatus: async (id, status) => {

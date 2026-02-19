@@ -81,9 +81,9 @@ export const openDoltDb = async (config) => {
       const pattern = `%${query}%`
       return queryAll(
         `SELECT * FROM issues
-         WHERE title LIKE ? OR description LIKE ? OR notes LIKE ?
+         WHERE id LIKE ? OR title LIKE ? OR description LIKE ? OR notes LIKE ?
          ORDER BY priority, created_at`,
-        [pattern, pattern, pattern]
+        [pattern, pattern, pattern, pattern]
       )
     },
 
