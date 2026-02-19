@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'preact/hooks'
 const SORT_OPTIONS = [
   { value: 'priority', label: 'Priority' },
   { value: 'age', label: 'Age (oldest)' },
+  { value: 'updated', label: 'Last updated' },
   { value: 'assignee', label: 'Assignee' },
   { value: 'type', label: 'Type' },
 ]

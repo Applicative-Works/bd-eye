@@ -40,6 +40,7 @@ const ClosedRecencyToggle = () => (
 const SORT_COMPARATORS = {
   priority: (a, b) => a.priority - b.priority || new Date(a.created_at) - new Date(b.created_at),
   age: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+  updated: (a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0),
   assignee: (a, b) => (a.assignee || '').localeCompare(b.assignee || '') || a.priority - b.priority,
   type: (a, b) => (a.issue_type || '').localeCompare(b.issue_type || '') || a.priority - b.priority,
 }
