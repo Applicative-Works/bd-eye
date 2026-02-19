@@ -1564,24 +1564,55 @@
   cursor: pointer;
 }
 
-.filter-toggle {
-  padding: 6px 12px;
+.filter-segmented {
+  display: flex;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.filter-seg-btn {
+  padding: 4px 10px;
   font-size: var(--text-sm);
   font-family: var(--font-sans);
   color: var(--color-text-secondary);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 100ms ease;
 }
 
-.filter-toggle:hover {
+.filter-seg-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.filter-seg-btn-active {
+  color: var(--color-accent-primary);
+  background: rgba(88, 166, 255, 0.15);
+  font-weight: var(--font-medium);
+}
+
+.filter-mine {
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 100ms ease;
+}
+
+.filter-mine:hover {
   color: var(--color-text-primary);
   border-color: var(--color-accent-primary);
 }
 
-.filter-toggle-active {
+.filter-mine-active {
   color: var(--color-accent-primary);
   border-color: var(--color-accent-primary);
   background: rgba(88, 166, 255, 0.1);

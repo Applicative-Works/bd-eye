@@ -2,7 +2,7 @@
 import { describe, test, expect, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/preact'
 import { useFilteredIssues } from '../../src/client/hooks/useFilteredIssues.js'
-import { filters } from '../../src/client/state.js'
+import { filters, currentUser } from '../../src/client/state.js'
 
 const defaultFilters = {
   priority: [],
@@ -10,7 +10,8 @@ const defaultFilters = {
   assignee: [],
   label: [],
   blockedOnly: false,
-  readyOnly: false
+  readyOnly: false,
+  assignedToMe: false
 }
 
 const issues = [
@@ -73,5 +74,26 @@ describe('useFilteredIssues', () => {
     filters.value = { ...defaultFilters, priority: ['P4'] }
     const { result } = renderHook(() => useFilteredIssues(issues))
     expect(result.current).toEqual([])
+  })
+
+  test('assignedToMe filters to currentUser issues', () => {
+    currentUser.value = 'Alice'
+    filters.value = { ...defaultFilters, assignedToMe: true }
+    const { result } = renderHook(() => useFilteredIssues(issues))
+    expect(result.current.map(i => i.id)).toEqual([1, 3])
+  })
+
+  test('assignedToMe has no effect when currentUser is null', () => {
+    currentUser.value = null
+    filters.value = { ...defaultFilters, assignedToMe: true }
+    const { result } = renderHook(() => useFilteredIssues(issues))
+    expect(result.current).toHaveLength(4)
+  })
+
+  test('assignedToMe combines with other filters', () => {
+    currentUser.value = 'Alice'
+    filters.value = { ...defaultFilters, assignedToMe: true, priority: ['P1'] }
+    const { result } = renderHook(() => useFilteredIssues(issues))
+    expect(result.current.map(i => i.id)).toEqual([1])
   })
 })

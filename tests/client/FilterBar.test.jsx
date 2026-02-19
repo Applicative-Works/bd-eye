@@ -7,7 +7,7 @@ vi.mock('../../src/client/projectUrl.js', () => ({
   apiUrl: (path) => `/api/projects/test-project${path}`
 }))
 
-import { filters, swimlaneGrouping } from '../../src/client/state.js'
+import { filters, swimlaneGrouping, currentUser } from '../../src/client/state.js'
 import { FilterBar } from '../../src/client/components/FilterBar.jsx'
 
 const defaultFilters = {
@@ -16,7 +16,8 @@ const defaultFilters = {
   assignee: [],
   label: [],
   blockedOnly: false,
-  readyOnly: false
+  readyOnly: false,
+  assignedToMe: false
 }
 
 const mockIssues = [
@@ -32,6 +33,7 @@ const filterBtn = (container, label) =>
 beforeEach(() => {
   filters.value = { ...defaultFilters }
   swimlaneGrouping.value = null
+  currentUser.value = 'Dan'
   globalThis.fetch = vi.fn(() =>
     Promise.resolve({ json: () => Promise.resolve({ data: ['frontend', 'backend', 'urgent'] }) })
   )
@@ -50,12 +52,24 @@ describe('FilterBar', () => {
     expect(filterBtn(container, label)).toBeInTheDocument()
   })
 
-  test.each([
-    ['Blocked only'],
-    ['Ready only'],
-  ])('renders %s toggle button', (label) => {
+  test('renders segmented control with All, Blocked, Ready', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const segBtns = container.querySelectorAll('.filter-seg-btn')
+    expect(segBtns).toHaveLength(3)
+    expect(segBtns[0]).toHaveTextContent('All')
+    expect(segBtns[1]).toHaveTextContent('Blocked')
+    expect(segBtns[2]).toHaveTextContent('Ready')
+  })
+
+  test('renders Mine chip when currentUser is set', () => {
     render(<FilterBar issues={mockIssues} />)
-    expect(screen.getByText(label)).toBeInTheDocument()
+    expect(screen.getByText('Mine')).toBeInTheDocument()
+  })
+
+  test('does not render Mine chip when currentUser is null', () => {
+    currentUser.value = null
+    render(<FilterBar issues={mockIssues} />)
+    expect(screen.queryByText('Mine')).not.toBeInTheDocument()
   })
 
   test('opens priority dropdown when clicked', () => {
@@ -130,13 +144,38 @@ describe('FilterBar', () => {
     expect(screen.getByText('backend')).toBeInTheDocument()
   })
 
-  test.each([
-    ['blockedOnly', 'Blocked only'],
-    ['readyOnly', 'Ready only'],
-  ])('toggling %s updates signal and shows chip', (key, label) => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(label))
-    expect(filters.value[key]).toBe(true)
+  test('clicking Blocked segment sets blockedOnly', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const segBtns = container.querySelectorAll('.filter-seg-btn')
+    fireEvent.click(segBtns[1])
+    expect(filters.value.blockedOnly).toBe(true)
+    expect(filters.value.readyOnly).toBe(false)
+  })
+
+  test('clicking Ready segment sets readyOnly', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const segBtns = container.querySelectorAll('.filter-seg-btn')
+    fireEvent.click(segBtns[2])
+    expect(filters.value.readyOnly).toBe(true)
+    expect(filters.value.blockedOnly).toBe(false)
+  })
+
+  test('clicking All segment clears both blocked and ready', () => {
+    filters.value = { ...defaultFilters, blockedOnly: true }
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const segBtns = container.querySelectorAll('.filter-seg-btn')
+    fireEvent.click(segBtns[0])
+    expect(filters.value.blockedOnly).toBe(false)
+    expect(filters.value.readyOnly).toBe(false)
+  })
+
+  test('clicking Mine toggles assignedToMe', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const mineBtn = container.querySelector('.filter-mine')
+    fireEvent.click(mineBtn)
+    expect(filters.value.assignedToMe).toBe(true)
+    fireEvent.click(mineBtn)
+    expect(filters.value.assignedToMe).toBe(false)
   })
 
   test('shows filter chips for active filters', () => {
@@ -152,8 +191,8 @@ describe('FilterBar', () => {
     expect(screen.getByText('Clear all')).toBeInTheDocument()
   })
 
-  test('clear all resets all filters', () => {
-    filters.value = { ...defaultFilters, priority: [1], type: ['bug'], blockedOnly: true }
+  test('clear all resets all filters including assignedToMe', () => {
+    filters.value = { ...defaultFilters, priority: [1], type: ['bug'], blockedOnly: true, assignedToMe: true }
     render(<FilterBar issues={mockIssues} />)
     fireEvent.click(screen.getByText('Clear all'))
     expect(filters.value).toEqual(defaultFilters)

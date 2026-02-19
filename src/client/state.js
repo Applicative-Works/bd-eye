@@ -8,7 +8,7 @@ currentProject.subscribe(v => { if (v) localStorage.setItem('bd-eye.lastProject'
 export const currentView = signal(localStorage.getItem('bd-eye.lastView') || 'board')
 currentView.subscribe(v => { if (v) localStorage.setItem('bd-eye.lastView', v) })
 export const selectedIssueId = signal(null)
-const defaultFilters = { priority: [], type: [], assignee: [], label: [], blockedOnly: false, readyOnly: false }
+const defaultFilters = { priority: [], type: [], assignee: [], label: [], blockedOnly: false, readyOnly: false, assignedToMe: false }
 const storedFilters = (() => {
   try { return JSON.parse(localStorage.getItem('bd-eye.filters')) } catch { return null }
 })()

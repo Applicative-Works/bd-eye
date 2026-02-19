@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { filters, swimlaneGrouping } from '../state.js'
+import { filters, swimlaneGrouping, currentUser } from '../state.js'
 import { apiUrl } from '../projectUrl.js'
 import { FilterChip } from './FilterChip.jsx'
 
@@ -72,6 +72,16 @@ export const FilterBar = ({ issues }) => {
     filters.value = { ...filters.value, [key]: !filters.value[key] }
   }
 
+  const setBlockingFilter = (mode) => {
+    filters.value = {
+      ...filters.value,
+      blockedOnly: mode === 'blocked',
+      readyOnly: mode === 'ready'
+    }
+  }
+
+  const blockingMode = filters.value.blockedOnly ? 'blocked' : filters.value.readyOnly ? 'ready' : 'all'
+
   const removeFilter = (type, value) => {
     if (typeof filters.value[type] === 'boolean') {
       filters.value = { ...filters.value, [type]: false }
@@ -90,7 +100,8 @@ export const FilterBar = ({ issues }) => {
       assignee: [],
       label: [],
       blockedOnly: false,
-      readyOnly: false
+      readyOnly: false,
+      assignedToMe: false
     }
   }
 
@@ -101,6 +112,7 @@ export const FilterBar = ({ issues }) => {
   filters.value.label.forEach(l => activeFilters.push({ type: 'label', value: l, label: l }))
   if (filters.value.blockedOnly) activeFilters.push({ type: 'blockedOnly', value: true, label: 'Blocked only' })
   if (filters.value.readyOnly) activeFilters.push({ type: 'readyOnly', value: true, label: 'Ready only' })
+  if (filters.value.assignedToMe) activeFilters.push({ type: 'assignedToMe', value: true, label: 'Mine' })
 
   const hasActiveFilters = activeFilters.length > 0
 
@@ -164,20 +176,29 @@ export const FilterBar = ({ issues }) => {
           />
         </div>
         <div class="filter-toggles">
-          <button
-            class={`filter-toggle ${filters.value.blockedOnly ? 'filter-toggle-active' : ''}`}
-            onClick={() => toggleBoolean('blockedOnly')}
-            type="button"
-          >
-            Blocked only
-          </button>
-          <button
-            class={`filter-toggle ${filters.value.readyOnly ? 'filter-toggle-active' : ''}`}
-            onClick={() => toggleBoolean('readyOnly')}
-            type="button"
-          >
-            Ready only
-          </button>
+          <div class="filter-segmented" role="radiogroup" aria-label="Issue blocking filter">
+            {['all', 'blocked', 'ready'].map(mode => (
+              <button
+                key={mode}
+                role="radio"
+                aria-checked={blockingMode === mode}
+                class={`filter-seg-btn${blockingMode === mode ? ' filter-seg-btn-active' : ''}`}
+                onClick={() => setBlockingFilter(mode)}
+                type="button"
+              >
+                {mode === 'all' ? 'All' : mode === 'blocked' ? 'Blocked' : 'Ready'}
+              </button>
+            ))}
+          </div>
+          {currentUser.value && (
+            <button
+              class={`filter-mine${filters.value.assignedToMe ? ' filter-mine-active' : ''}`}
+              onClick={() => toggleBoolean('assignedToMe')}
+              type="button"
+            >
+              Mine
+            </button>
+          )}
           <GroupByControl />
         </div>
       </div>

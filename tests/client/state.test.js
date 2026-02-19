@@ -19,7 +19,8 @@ describe('state signals', () => {
       assignee: [],
       label: [],
       blockedOnly: false,
-      readyOnly: false
+      readyOnly: false,
+      assignedToMe: false
     })
   })
 
