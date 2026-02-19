@@ -3,10 +3,11 @@ import { DndContext, DragOverlay, PointerSensor, pointerWithin, useSensor, useSe
 import { Card } from './Card.jsx'
 import { DroppableColumn } from './DroppableColumn.jsx'
 import { FilterBar } from './FilterBar.jsx'
+import { SortControl } from './SortControl.jsx'
 import { selectIssue } from '../router.js'
 import { useIssues } from '../hooks/useIssues.js'
 import { useFilteredIssues } from '../hooks/useFilteredIssues.js'
-import { closedDays } from '../state.js'
+import { closedDays, columnSortOrders } from '../state.js'
 
 const RECENCY_OPTIONS = [
   { label: '1d', days: 1 },
@@ -35,6 +36,13 @@ const ClosedRecencyToggle = () => (
   </div>
 )
 
+const SORT_COMPARATORS = {
+  priority: (a, b) => a.priority - b.priority || new Date(a.created_at) - new Date(b.created_at),
+  age: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+  assignee: (a, b) => (a.assignee || '').localeCompare(b.assignee || '') || a.priority - b.priority,
+  type: (a, b) => (a.issue_type || '').localeCompare(b.issue_type || '') || a.priority - b.priority,
+}
+
 const COLUMNS = [
   { key: 'open', label: 'Open' },
   { key: 'in_progress', label: 'In Progress' },
@@ -60,12 +68,13 @@ export const Board = () => {
 
   const effectiveStatus = (issue) => optimisticMoves.get(issue.id) ?? issue.status
 
+  const sortOrders = columnSortOrders.value
   const sorted = Object.fromEntries(
     COLUMNS.map(col => [
       col.key,
       filtered
         .filter(i => effectiveStatus(i) === col.key)
-        .sort((a, b) => a.priority - b.priority || new Date(a.created_at) - new Date(b.created_at))
+        .sort(SORT_COMPARATORS[sortOrders[col.key]] || SORT_COMPARATORS.priority)
     ])
   )
 
@@ -146,7 +155,12 @@ export const Board = () => {
               key={col.key}
               col={col}
               count={grouped[col.key].length}
-              headerExtra={col.key === 'closed' ? <ClosedRecencyToggle /> : null}
+              headerExtra={
+                <div class="column-header-controls">
+                  <SortControl columnKey={col.key} sortOrders={columnSortOrders} />
+                  {col.key === 'closed' && <ClosedRecencyToggle />}
+                </div>
+              }
             >
               {grouped[col.key].map(issue => (
                 <Card

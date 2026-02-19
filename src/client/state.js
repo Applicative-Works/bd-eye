@@ -13,3 +13,4 @@ export const filters = signal({
 export const columnMode = signal('status')
 export const closedDays = signal(null)
 export const lastUpdated = signal(null)
+export const columnSortOrders = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })

@@ -6,6 +6,7 @@ import { signal } from '@preact/signals'
 
 const closedDaysSignal = signal(null)
 const filtersSignal = signal({ priority: [], type: [], assignee: [], label: [], blockedOnly: false, readyOnly: false })
+const columnSortOrdersSignal = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })
 
 vi.mock('../../src/client/hooks/useIssues.js', () => ({
   useIssues: vi.fn()
@@ -28,6 +29,11 @@ vi.mock('../../src/client/state.js', () => ({
   get filters() { return filtersSignal },
   get closedDays() { return closedDaysSignal },
   get columnMode() { return signal('status') },
+  get columnSortOrders() { return columnSortOrdersSignal },
+}))
+
+vi.mock('../../src/client/components/SortControl.jsx', () => ({
+  SortControl: ({ columnKey }) => <div data-testid={`sort-control-${columnKey}`}>Sort</div>,
 }))
 
 let capturedDndProps = {}
@@ -82,6 +88,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   capturedDndProps = {}
   closedDaysSignal.value = null
+  columnSortOrdersSignal.value = { open: 'priority', in_progress: 'priority', closed: 'priority' }
   globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }))
   useIssues.mockImplementation((endpoint) => {
     if (endpoint === '/api/issues') {
@@ -253,6 +260,75 @@ describe('drag and drop handlers', () => {
     render(<Board />)
     await act(async () => capturedDndProps.onDragEnd({ active: { id: 'UNKNOWN' }, over: { id: 'closed' } }))
     expect(globalThis.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status'), expect.anything())
+  })
+})
+
+describe('sort controls', () => {
+  test('renders sort control for each column', () => {
+    render(<Board />)
+    expect(screen.getByTestId('sort-control-open')).toBeInTheDocument()
+    expect(screen.getByTestId('sort-control-in_progress')).toBeInTheDocument()
+    expect(screen.getByTestId('sort-control-closed')).toBeInTheDocument()
+  })
+
+  test('sort by age orders oldest first', () => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/api/issues') {
+        return {
+          issues: [
+            { id: 'S-1', title: 'Newer', status: 'open', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-06-01T00:00:00Z' },
+            { id: 'S-2', title: 'Older', status: 'open', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    columnSortOrdersSignal.value = { open: 'age', in_progress: 'priority', closed: 'priority' }
+    render(<Board />)
+    const cards = screen.getByTestId('column-open').querySelectorAll('[data-testid^="card-"]')
+    expect(cards[0]).toHaveTextContent('Older')
+    expect(cards[1]).toHaveTextContent('Newer')
+  })
+
+  test('sort by assignee orders alphabetically', () => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/api/issues') {
+        return {
+          issues: [
+            { id: 'S-1', title: 'Dan card', status: 'open', priority: 1, issue_type: 'task', assignee: 'Dan', labels: [], created_at: '2025-01-01T00:00:00Z' },
+            { id: 'S-2', title: 'Alice card', status: 'open', priority: 1, issue_type: 'task', assignee: 'Alice', labels: [], created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    columnSortOrdersSignal.value = { open: 'assignee', in_progress: 'priority', closed: 'priority' }
+    render(<Board />)
+    const cards = screen.getByTestId('column-open').querySelectorAll('[data-testid^="card-"]')
+    expect(cards[0]).toHaveTextContent('Alice card')
+    expect(cards[1]).toHaveTextContent('Dan card')
+  })
+
+  test('sort by type groups by issue type', () => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/api/issues') {
+        return {
+          issues: [
+            { id: 'S-1', title: 'A task', status: 'open', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z' },
+            { id: 'S-2', title: 'A bug', status: 'open', priority: 1, issue_type: 'bug', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    columnSortOrdersSignal.value = { open: 'type', in_progress: 'priority', closed: 'priority' }
+    render(<Board />)
+    const cards = screen.getByTestId('column-open').querySelectorAll('[data-testid^="card-"]')
+    expect(cards[0]).toHaveTextContent('A bug')
+    expect(cards[1]).toHaveTextContent('A task')
   })
 })
 
