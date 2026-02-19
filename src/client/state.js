@@ -5,7 +5,8 @@ export const projectList = signal([])
 export const projectsLoading = signal(true)
 currentProject.subscribe(v => { if (v) localStorage.setItem('bd-eye.lastProject', v) })
 
-export const currentView = signal('board')
+export const currentView = signal(localStorage.getItem('bd-eye.lastView') || 'board')
+currentView.subscribe(v => { if (v) localStorage.setItem('bd-eye.lastView', v) })
 export const selectedIssueId = signal(null)
 export const filters = signal({
   priority: [],

@@ -18,6 +18,13 @@ export const initRouter = () => {
                        new URLSearchParams(hash.split('?')[1] || '').get('issue')
 
     const basePath = hash.split('?')[0]
+    if (basePath === '' || basePath === '#/') {
+      const stored = currentView.value
+      if (stored && stored !== 'board') {
+        window.location.hash = `/${stored}`
+        return
+      }
+    }
     currentView.value = ROUTES[basePath] ?? 'board'
     selectedIssueId.value = issueParam ?? null
   }
