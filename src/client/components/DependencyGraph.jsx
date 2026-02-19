@@ -397,9 +397,11 @@ export const DependencyGraph = () => {
   const [mode, setMode] = useState('focus')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState(/** @type {Issue[]} */ ([]))
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
   const handleSearch = (q) => {
     setSearchQuery(q)
+    setSelectedIndex(0)
     if (!q.trim()) {
       setSearchResults([])
       return
@@ -407,7 +409,7 @@ export const DependencyGraph = () => {
 
     fetch(`/api/search?q=${encodeURIComponent(q)}`)
       .then(r => r.json())
-      .then(({ data }) => setSearchResults(data || []))
+      .then(({ data }) => { setSearchResults(data || []); setSelectedIndex(0) })
       .catch(() => setSearchResults([]))
   }
 
@@ -415,6 +417,31 @@ export const DependencyGraph = () => {
     selectIssue(id)
     setSearchQuery('')
     setSearchResults([])
+    setSelectedIndex(0)
+  }
+
+  const handleSearchKeyDown = (e) => {
+    if (searchResults.length === 0) return
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'j':
+        if (e.key === 'j' && e.target.tagName === 'INPUT') break
+        e.preventDefault()
+        setSelectedIndex(i => Math.min(i + 1, searchResults.length - 1))
+        break
+      case 'ArrowUp':
+      case 'k':
+        if (e.key === 'k' && e.target.tagName === 'INPUT') break
+        e.preventDefault()
+        setSelectedIndex(i => Math.max(i - 1, 0))
+        break
+      case 'Enter':
+        if (searchResults[selectedIndex]) {
+          e.preventDefault()
+          selectFromSearch(searchResults[selectedIndex].id)
+        }
+        break
+    }
   }
 
   useEffect(() => {
@@ -439,13 +466,14 @@ export const DependencyGraph = () => {
             placeholder="Search for an issue..."
             value={searchQuery}
             onInput={(e) => handleSearch(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
           />
           {searchResults.length > 0 && (
             <div class="dep-search-results">
-              {searchResults.map(issue => (
+              {searchResults.map((issue, i) => (
                 <div
                   key={issue.id}
-                  class="dep-search-result"
+                  class={`dep-search-result${i === selectedIndex ? ' dep-search-result-active' : ''}`}
                   onClick={() => selectFromSearch(issue.id)}
                 >
                   <span class="font-mono text-sm">{issue.id}</span>

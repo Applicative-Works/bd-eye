@@ -110,6 +110,72 @@ describe('DependencyGraph', () => {
       fireEvent.input(screen.getByPlaceholderText('Search for an issue...'), { target: { value: 'q' } })
       await waitFor(() => expect(global.fetch).toHaveBeenCalled())
     })
+
+    describe('search keyboard navigation', () => {
+      const results = [
+        { id: 'PROJ-1', title: 'Alpha' },
+        { id: 'PROJ-2', title: 'Beta' },
+        { id: 'PROJ-3', title: 'Gamma' },
+      ]
+
+      const setupSearchResults = async () => {
+        global.fetch = vi.fn((url) => {
+          if (url.includes('/api/search'))
+            return Promise.resolve({ json: () => Promise.resolve({ data: results }) })
+          return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
+        })
+        render(<DependencyGraph />)
+        const input = screen.getByPlaceholderText('Search for an issue...')
+        fireEvent.input(input, { target: { value: 'proj' } })
+        await waitFor(() => expect(screen.getByText('Alpha')).toBeInTheDocument())
+        return input
+      }
+
+      test('ArrowDown highlights the next result', async () => {
+        const input = await setupSearchResults()
+        const items = screen.getAllByText(/Alpha|Beta|Gamma/).map(el => el.closest('.dep-search-result'))
+        expect(items[0]).toHaveClass('dep-search-result-active')
+
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        expect(items[0]).not.toHaveClass('dep-search-result-active')
+        expect(items[1]).toHaveClass('dep-search-result-active')
+      })
+
+      test('ArrowUp highlights the previous result', async () => {
+        const input = await setupSearchResults()
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        const items = screen.getAllByText(/Alpha|Beta|Gamma/).map(el => el.closest('.dep-search-result'))
+        expect(items[2]).toHaveClass('dep-search-result-active')
+
+        fireEvent.keyDown(input, { key: 'ArrowUp' })
+        expect(items[1]).toHaveClass('dep-search-result-active')
+      })
+
+      test('ArrowDown clamps at the last result', async () => {
+        const input = await setupSearchResults()
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        const items = screen.getAllByText(/Alpha|Beta|Gamma/).map(el => el.closest('.dep-search-result'))
+        expect(items[2]).toHaveClass('dep-search-result-active')
+      })
+
+      test('ArrowUp clamps at the first result', async () => {
+        const input = await setupSearchResults()
+        fireEvent.keyDown(input, { key: 'ArrowUp' })
+        const items = screen.getAllByText(/Alpha|Beta|Gamma/).map(el => el.closest('.dep-search-result'))
+        expect(items[0]).toHaveClass('dep-search-result-active')
+      })
+
+      test('Enter selects the highlighted result', async () => {
+        const input = await setupSearchResults()
+        fireEvent.keyDown(input, { key: 'ArrowDown' })
+        fireEvent.keyDown(input, { key: 'Enter' })
+        expect(selectIssue).toHaveBeenCalledWith('PROJ-2')
+      })
+    })
   })
 
   describe('FocusView', () => {

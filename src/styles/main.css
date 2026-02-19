@@ -1222,7 +1222,8 @@
   transition: background 100ms ease;
 }
 
-.dep-search-result:hover {
+.dep-search-result:hover,
+.dep-search-result-active {
   background: var(--color-bg-tertiary);
 }
 
