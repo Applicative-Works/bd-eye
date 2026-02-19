@@ -1,7 +1,3 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
-import { homedir } from 'node:os'
-
 /**
  * @typedef {{
  *   id: string
@@ -53,37 +49,6 @@ import { homedir } from 'node:os'
  * }} Db
  */
 
-/** @param {string} dir */
-const findBeadsDb = (dir) => {
-  const beadsDir = join(dir, '.beads')
-  if (existsSync(beadsDir)) {
-    const dbs = readdirSync(beadsDir).filter((/** @type {string} */ f) => f.endsWith('.db'))
-    if (dbs.length > 0) return join(beadsDir, dbs[0])
-  }
-  const parent = dirname(dir)
-  if (parent === dir) return undefined
-  return findBeadsDb(parent)
-}
-
-export const resolveDbPath = () => {
-  if (process.env.BEADS_DB) return resolve(process.env.BEADS_DB)
-  const found = findBeadsDb(process.cwd())
-  if (found) return found
-  return join(homedir(), '.beads', 'default.db')
-}
-
-const hasDoltEnv = () =>
-  ['DOLT_HOST', 'DOLT_PORT', 'DOLT_USER', 'DOLT_PASSWORD', 'DOLT_DATABASE'].some((k) => k in process.env)
-
-/** @param {string} path @returns {'sqlite' | 'dolt'} */
-export const detectDbType = (path) => {
-  if (hasDoltEnv()) return 'dolt'
-  try {
-    if (statSync(path).isDirectory() && existsSync(join(path, '.dolt'))) return 'dolt'
-  } catch { /* not a directory */ }
-  return 'sqlite'
-}
-
 const SYSTEM_DBS = new Set(['information_schema', 'mysql', 'sys', 'performance_schema'])
 
 /** @param {{ host: string, port: number, user: string, password: string }} config */
@@ -101,37 +66,23 @@ const discoverDoltDatabase = async (config) => {
   }
 }
 
-/** @param {string} [dbPath] @returns {{ host: string, port: number, user: string, password: string, database: string }} */
-export const doltConfig = (dbPath) => ({
+/** @returns {{ host: string, port: number, user: string, password: string, database: string }} */
+export const doltConfig = () => ({
   host: process.env.DOLT_HOST ?? '127.0.0.1',
   port: Number(process.env.DOLT_PORT ?? 3306),
   user: process.env.DOLT_USER ?? 'root',
   password: process.env.DOLT_PASSWORD ?? '',
-  database: process.env.DOLT_DATABASE ?? (dbPath ? basename(dbPath) : '')
+  database: process.env.DOLT_DATABASE ?? ''
 })
 
-/** @param {string} [path] @returns {Promise<{ db: Db, dbType: 'sqlite' | 'dolt', dbPath: string }>} */
-export const openDb = async (path) => {
-  if (!path && hasDoltEnv()) {
-    const config = doltConfig()
-    if (!config.database) {
-      config.database = await discoverDoltDatabase(config)
-    }
-    const { openDoltDb } = await import('./db-dolt.js')
-    const db = await openDoltDb(config)
-    return { db, dbType: /** @type {const} */ ('dolt'), dbPath: `dolt://${config.host}:${config.port}/${config.database}` }
+/** @returns {Promise<{ db: Db, config: { host: string, port: number, user: string, password: string, database: string }, dbPath: string }>} */
+export const openDb = async () => {
+  const config = doltConfig()
+  if (!config.database) {
+    config.database = await discoverDoltDatabase(config)
   }
-
-  const dbPath = path ?? resolveDbPath()
-  const dbType = detectDbType(dbPath)
-
-  if (dbType === 'dolt') {
-    const { openDoltDb } = await import('./db-dolt.js')
-    const db = await openDoltDb(doltConfig(dbPath))
-    return { db, dbType, dbPath }
-  }
-
-  const { openSqliteDb } = await import('./db-sqlite.js')
-  const db = await openSqliteDb(dbPath)
-  return { db, dbType, dbPath }
+  const { openDoltDb } = await import('./db-dolt.js')
+  const db = await openDoltDb(config)
+  const dbPath = `dolt://${config.host}:${config.port}/${config.database}`
+  return { db, config, dbPath }
 }

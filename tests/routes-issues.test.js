@@ -1,25 +1,62 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { Hono } from 'hono'
-import { createTestDb, seedIssues } from './helpers.js'
-import { openSqliteDb } from '../src/server/db-sqlite.js'
 import { issueRoutes } from '../src/server/routes/issues.js'
 
-let db
-let app
-let rawDb
+const issues = [
+  { id: 'issue-4', title: 'Epic one', description: 'An epic', design: '', acceptance_criteria: '', notes: '', status: 'open', priority: 0, issue_type: 'epic', assignee: null, created_at: '2024-01-04', updated_at: '2024-01-04', closed_at: null, metadata: '{}' },
+  { id: 'issue-1', title: 'First issue', description: 'Description one', design: '', acceptance_criteria: '', notes: 'Some notes', status: 'open', priority: 1, issue_type: 'task', assignee: null, created_at: '2024-01-01', updated_at: '2024-01-01', closed_at: null, metadata: '{}' },
+  { id: 'issue-3', title: 'Third issue', description: 'Description three', design: '', acceptance_criteria: '', notes: '', status: 'closed', priority: 1, issue_type: 'feature', assignee: 'bob', created_at: '2024-01-03', updated_at: '2024-01-03', closed_at: '2024-01-10', metadata: '{}' },
+  { id: 'issue-2', title: 'Second issue', description: 'Description two', design: '', acceptance_criteria: '', notes: '', status: 'open', priority: 2, issue_type: 'bug', assignee: 'alice', created_at: '2024-01-02', updated_at: '2024-01-02', closed_at: null, metadata: '{}' },
+  { id: 'issue-5', title: 'Blocked task', description: 'This is blocked', design: '', acceptance_criteria: '', notes: '', status: 'open', priority: 2, issue_type: 'task', assignee: null, created_at: '2024-01-05', updated_at: '2024-01-05', closed_at: null, metadata: '{}' },
+]
 
-beforeAll(async () => {
-  const { db: syncDb, dbPath } = createTestDb()
-  rawDb = syncDb
-  seedIssues(syncDb)
-  db = await openSqliteDb(dbPath)
+const labels = [
+  { issue_id: 'issue-1', label: 'backend' },
+  { issue_id: 'issue-1', label: 'urgent' },
+  { issue_id: 'issue-2', label: 'frontend' },
+]
+
+const comments = [
+  { id: 1, issue_id: 'issue-1', author: 'alice', text: 'Looks good', created_at: '2024-01-02' },
+  { id: 2, issue_id: 'issue-1', author: 'bob', text: 'Agreed', created_at: '2024-01-03' },
+]
+
+const db = {
+  allIssues: async () => [...issues],
+  issueById: async (id) => issues.find((i) => i.id === id),
+  readyIssues: async () => issues.filter((i) => i.id !== 'issue-5'),
+  blockedIssues: async () => [{ ...issues.find((i) => i.id === 'issue-5'), blocked_by_count: 1 }],
+  dependenciesFor: async (id) => {
+    if (id === 'issue-5') return { blockedBy: [issues.find((i) => i.id === 'issue-1')], blocks: [] }
+    if (id === 'issue-1') return { blockedBy: [], blocks: [issues.find((i) => i.id === 'issue-5')] }
+    return { blockedBy: [], blocks: [] }
+  },
+  epics: async () => issues.filter((i) => i.issue_type === 'epic'),
+  epicChildren: async (epicId) => {
+    if (epicId === 'issue-4') return [issues.find((i) => i.id === 'issue-2')]
+    return []
+  },
+  labels: async () => ['backend', 'frontend', 'urgent'],
+  commentsFor: async (issueId) => comments.filter((c) => c.issue_id === issueId),
+  allLabels: async () => [...labels],
+  searchIssues: async (query) => {
+    const q = query.toLowerCase()
+    return issues.filter((i) =>
+      i.id.toLowerCase().includes(q) ||
+      i.title.toLowerCase().includes(q) ||
+      i.description.toLowerCase().includes(q) ||
+      i.notes.toLowerCase().includes(q)
+    )
+  },
+  updateIssueStatus: async () => {},
+  close: async () => {},
+}
+
+let app
+
+beforeAll(() => {
   app = new Hono()
   app.route('/api', issueRoutes(db))
-})
-
-afterAll(async () => {
-  await db.close()
-  rawDb.close()
 })
 
 const get = async (path) => {
@@ -196,5 +233,4 @@ describe('GET /search', () => {
     const { body } = await get('/search?q=zzzznonexistent')
     expect(body).toEqual({ data: [], count: 0 })
   })
-
 })

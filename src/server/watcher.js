@@ -1,47 +1,9 @@
-import { watch } from 'chokidar'
-import { dirname, join, basename } from 'node:path'
-
-/**
- * @param {string} dbPath
- * @param {() => void} onChange
- * @returns {{ close: () => Promise<void> }}
- */
-const watchSqliteDb = (dbPath, onChange) => {
-  const dir = dirname(dbPath)
-  const stem = basename(dbPath, '.db')
-  const walFile = join(dir, `${stem}.db-wal`)
-  const shmFile = join(dir, `${stem}.db-shm`)
-
-  /** @type {ReturnType<typeof setTimeout> | undefined} */
-  let timer
-
-  const debounced = () => {
-    clearTimeout(timer)
-    timer = setTimeout(onChange, 500)
-  }
-
-  const watcher = watch([dbPath, walFile, shmFile], {
-    ignoreInitial: true,
-    awaitWriteFinish: false
-  })
-
-  watcher.on('change', debounced)
-  watcher.on('add', debounced)
-
-  return {
-    close: async () => {
-      clearTimeout(timer)
-      await watcher.close()
-    }
-  }
-}
-
 /**
  * @param {{ host?: string, port?: number, user?: string, password?: string, database?: string }} config
  * @param {() => void} onChange
  * @returns {{ close: () => Promise<void> }}
  */
-const watchDoltDb = (config, onChange) => {
+export const createWatcher = (config, onChange) => {
   let lastHash = ''
   let stopped = false
 
@@ -77,17 +39,4 @@ const watchDoltDb = (config, onChange) => {
   return {
     close: async () => { stopped = true }
   }
-}
-
-/**
- * @param {'sqlite' | 'dolt'} dbType
- * @param {string | { host?: string, port?: number, user?: string, password?: string, database?: string }} pathOrConfig
- * @param {() => void} onChange
- * @returns {{ close: () => Promise<void> }}
- */
-export const createWatcher = (dbType, pathOrConfig, onChange) => {
-  if (dbType === 'dolt') {
-    return watchDoltDb(/** @type {any} */ (pathOrConfig), onChange)
-  }
-  return watchSqliteDb(/** @type {string} */ (pathOrConfig), onChange)
 }
