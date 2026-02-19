@@ -2,6 +2,8 @@ import { useState, useEffect } from 'preact/hooks'
 import { Markdown } from './Markdown.jsx'
 import { CopyableId } from './CopyableId.jsx'
 import { apiUrl } from '../projectUrl.js'
+import { cycleTimeThresholds } from '../state.js'
+import { formatDuration, issueAgeMs, durationTier } from '../cycleTime.js'
 
 /**
  * @typedef {Object} Comment
@@ -141,6 +143,8 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
           )}
         </div>
 
+        <TimingSection issue={issue} />
+
         {issue.description && (
           <div class='panel-section'>
             <div class='panel-section-title'>Description</div>
@@ -225,6 +229,32 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
               ))}
             </div>
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const TimingSection = ({ issue }) => {
+  const ageMs = issueAgeMs(issue)
+  if (ageMs <= 0) return null
+
+  const thresholds = cycleTimeThresholds.value
+  const tier = durationTier(ageMs, thresholds)
+  const isClosed = issue.status === 'closed'
+  const label = isClosed ? 'Cycle time' : 'Age'
+  const medianStr = thresholds ? formatDuration(thresholds.median) : null
+
+  return (
+    <div class='panel-section'>
+      <div class='detail-timing'>
+        <span class={`detail-timing-value detail-timing-${tier}`}>
+          {label}: {formatDuration(ageMs)}
+        </span>
+        {medianStr && (
+          <span class='text-tertiary text-sm'>
+            (median: {medianStr})
+          </span>
         )}
       </div>
     </div>

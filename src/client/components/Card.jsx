@@ -3,6 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { Badge, PillBadge } from './Badge.jsx';
 import { CopyableId } from './CopyableId.jsx';
 import { changedIds } from '../state.js';
+import { formatDuration, issueAgeMs, durationTier } from '../cycleTime.js';
 
 /**
  * @typedef {{
@@ -16,25 +17,15 @@ import { changedIds } from '../state.js';
  *   blocked_by_count?: number
  *   blocks_count?: number
  *   updated_at?: string
+ *   created_at?: string
+ *   closed_at?: string
  * }} CardIssue
  */
 
-const ageInDays = (dateStr) => {
-  if (!dateStr) return 0
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
-}
-
-const ageClass = (days) => {
-  if (days >= 14) return 'card-age-stale'
-  if (days >= 7) return 'card-age-old'
-  if (days >= 3) return 'card-age-aging'
-  return ''
-}
-
 /**
- * @param {{ issue: CardIssue, onClick?: (id: string) => void, isDragging?: boolean, isOverlay?: boolean }} props
+ * @param {{ issue: CardIssue, onClick?: (id: string) => void, isDragging?: boolean, isOverlay?: boolean, thresholds?: { median: number, p75: number } | null }} props
  */
-export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) => {
+export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, thresholds = null }) => {
   const {
     id,
     title,
@@ -74,12 +65,12 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
     return () => el.removeEventListener('animationend', cleanup)
   }, [isHighlighted, id])
 
-  const days = status !== 'closed' ? ageInDays(issue.updated_at) : 0
+  const ageMs = issueAgeMs(issue)
+  const tier = durationTier(ageMs, thresholds)
 
   const cardClass = [
     'card',
     blocked_by_count > 0 ? 'card-blocked' : status === 'open' && blocked_by_count === 0 ? 'card-ready' : '',
-    ageClass(days),
     isDragging ? 'card-dragging' : '',
   ].filter(Boolean).join(' ');
 
@@ -118,26 +109,29 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false }) 
         <span class={`text-xs ${assignee ? 'text-secondary' : 'text-tertiary'}`}>
           {assignee || 'unassigned'}
         </span>
-        {(blocked_by_count > 0 || blocks_count > 0) && (
-          <div class='flex items-center gap-2'>
-            {blocked_by_count > 0 && (
-              <span
-                class='text-xs'
-                style={{ color: 'var(--color-blocked-icon)' }}
-              >
-                ⬆{blocked_by_count}
-              </span>
-            )}
-            {blocks_count > 0 && (
-              <span
-                class='text-xs'
-                style={{ color: 'var(--color-blocking-text)' }}
-              >
-                ⬇{blocks_count}
-              </span>
-            )}
-          </div>
-        )}
+        <div class='flex items-center gap-2'>
+          {blocked_by_count > 0 && (
+            <span
+              class='text-xs'
+              style={{ color: 'var(--color-blocked-icon)' }}
+            >
+              ⬆{blocked_by_count}
+            </span>
+          )}
+          {blocks_count > 0 && (
+            <span
+              class='text-xs'
+              style={{ color: 'var(--color-blocking-text)' }}
+            >
+              ⬇{blocks_count}
+            </span>
+          )}
+          {ageMs > 0 && (
+            <span class={`card-duration card-duration-${tier}`}>
+              {formatDuration(ageMs)}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

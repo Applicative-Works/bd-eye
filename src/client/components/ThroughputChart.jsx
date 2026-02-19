@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'preact/hooks'
 import { useIssues } from '../hooks/useIssues.js'
+import { computeThresholds, formatDuration } from '../cycleTime.js'
 
 const TYPE_COLOR = {
   task:    '#58a6ff',
@@ -409,12 +410,89 @@ const TypeBreakdownRow = ({ type, buckets, total }) => {
   )
 }
 
+const DAY_MS = 86400000
+
+const ScatterOverlay = ({ issues, width, height, thresholds }) => {
+  const closed = useMemo(() =>
+    issues
+      .filter(i => i.closed_at && i.created_at)
+      .map(i => ({
+        closeDate: new Date(i.closed_at).getTime(),
+        cycleMs: new Date(i.closed_at).getTime() - new Date(i.created_at).getTime(),
+        type: i.issue_type || 'task',
+      }))
+      .filter(d => d.cycleMs > 0)
+      .sort((a, b) => a.closeDate - b.closeDate),
+    [issues]
+  )
+
+  if (closed.length < 2) return null
+
+  const innerW = width - CHART_MARGIN.left - CHART_MARGIN.right
+  const innerH = height - CHART_MARGIN.top - CHART_MARGIN.bottom
+
+  const minDate = closed[0].closeDate
+  const maxDate = closed[closed.length - 1].closeDate
+  const dateRange = maxDate - minDate || 1
+  const maxCycle = Math.max(...closed.map(d => d.cycleMs), thresholds?.p75 || 0)
+
+  const xScale = (ms) => CHART_MARGIN.left + ((ms - minDate) / dateRange) * innerW
+  const yScale = (ms) => CHART_MARGIN.top + innerH - (ms / maxCycle) * innerH * 0.92
+
+  return (
+    <g class="tp-scatter-overlay">
+      {thresholds && (
+        <>
+          <line
+            x1={CHART_MARGIN.left} x2={CHART_MARGIN.left + innerW}
+            y1={yScale(thresholds.median)} y2={yScale(thresholds.median)}
+            class="tp-scatter-line"
+            stroke="var(--color-success)" stroke-dasharray="6,4" stroke-width="1" opacity="0.6"
+          />
+          <text
+            x={CHART_MARGIN.left + innerW + 4} y={yScale(thresholds.median) + 3}
+            font-size="9" fill="var(--color-success)" opacity="0.8"
+          >
+            med
+          </text>
+          <line
+            x1={CHART_MARGIN.left} x2={CHART_MARGIN.left + innerW}
+            y1={yScale(thresholds.p75)} y2={yScale(thresholds.p75)}
+            class="tp-scatter-line"
+            stroke="var(--color-warning)" stroke-dasharray="6,4" stroke-width="1" opacity="0.6"
+          />
+          <text
+            x={CHART_MARGIN.left + innerW + 4} y={yScale(thresholds.p75) + 3}
+            font-size="9" fill="var(--color-warning)" opacity="0.8"
+          >
+            p75
+          </text>
+        </>
+      )}
+      {closed.map((d, i) => (
+        <circle
+          key={i}
+          cx={xScale(d.closeDate)}
+          cy={yScale(d.cycleMs)}
+          r="4"
+          fill={TYPE_COLOR[d.type] || TYPE_COLOR.task}
+          opacity="0.7"
+          class="tp-scatter-dot"
+        >
+          <title>{formatDuration(d.cycleMs)}</title>
+        </circle>
+      ))}
+    </g>
+  )
+}
+
 export const ThroughputChart = () => {
   const { issues, loading } = useIssues('/issues')
   const [granularity, setGranularity] = useState('week')
   const [hoveredType, setHoveredType] = useState(null)
   const [hoveredBucketIndex, setHoveredBucketIndex] = useState(null)
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, bucket: null })
+  const [showScatter, setShowScatter] = useState(false)
   const containerRef = useRef(null)
   const [chartWidth, setChartWidth] = useState(800)
 
@@ -473,6 +551,31 @@ export const ThroughputChart = () => {
     setTooltip({ visible: true, x: txClamped, y: CHART_MARGIN.top + 8, bucket })
   }, [buckets, chartWidth])
 
+  const cycleThresholds = useMemo(() => {
+    const closed = issues.filter(i => i.status === 'closed')
+    return computeThresholds(closed)
+  }, [issues])
+
+  const cycleTrend = useMemo(() => {
+    if (!issues.length) return null
+    const closed = issues
+      .filter(i => i.closed_at && i.created_at)
+      .map(i => ({
+        closedAt: new Date(i.closed_at).getTime(),
+        cycleMs: new Date(i.closed_at).getTime() - new Date(i.created_at).getTime(),
+      }))
+      .filter(d => d.cycleMs > 0)
+      .sort((a, b) => a.closedAt - b.closedAt)
+
+    if (closed.length < 6) return null
+    const half = Math.floor(closed.length / 2)
+    const recentMedian = closed.slice(half).map(d => d.cycleMs).sort((a, b) => a - b)[Math.floor((closed.length - half) / 2)]
+    const priorMedian = closed.slice(0, half).map(d => d.cycleMs).sort((a, b) => a - b)[Math.floor(half / 2)]
+    if (!priorMedian) return null
+    const delta = ((recentMedian - priorMedian) / priorMedian) * 100
+    return { delta: Math.round(delta), up: delta >= 0 }
+  }, [issues])
+
   const chartHeight = Math.min(320, Math.max(200, chartWidth * 0.35))
 
   if (loading) return <div class="tp-empty">Loading...</div>
@@ -487,6 +590,12 @@ export const ThroughputChart = () => {
         </div>
         <div class="tp-header-right">
           <TypeLegend onHover={setHoveredType} hoveredType={hoveredType} />
+          <button
+            class={`tp-scatter-toggle${showScatter ? ' tp-scatter-toggle-active' : ''}`}
+            onClick={() => setShowScatter(s => !s)}
+          >
+            Scatter
+          </button>
           <BucketToggle value={granularity} onChange={setGranularity} />
         </div>
       </div>
@@ -511,25 +620,47 @@ export const ThroughputChart = () => {
           />
         )}
         <StatCard label="Periods" value={buckets.length} sub={granularity + 's'} />
+        {cycleThresholds && (
+          <>
+            <StatCard label="Median cycle" value={formatDuration(cycleThresholds.median)} sub="cycle time" />
+            <StatCard label="P75 cycle" value={formatDuration(cycleThresholds.p75)} sub="cycle time" accent="var(--color-warning)" />
+          </>
+        )}
+        {cycleTrend && (
+          <StatCard
+            label="Cycle trend"
+            value={`${cycleTrend.up ? '+' : ''}${cycleTrend.delta}%`}
+            sub="recent vs prior"
+            accent={cycleTrend.up ? 'var(--color-error)' : 'var(--color-success)'}
+          />
+        )}
       </div>
 
       <div class="tp-chart-wrap" ref={containerRef}>
-        <SvgChart
-          buckets={buckets}
-          granularity={granularity}
-          hoveredType={hoveredType}
-          width={chartWidth}
-          height={chartHeight}
-          onHoverBucket={handleHoverBucket}
-          hoveredBucketIndex={hoveredBucketIndex}
-        />
-        <Tooltip
-          bucket={tooltip.bucket}
-          granularity={granularity}
-          x={tooltip.x}
-          y={tooltip.y}
-          visible={tooltip.visible}
-        />
+        {showScatter ? (
+          <svg class="tp-svg" width={chartWidth} height={chartHeight} role="img" aria-label="Cycle time scatter plot">
+            <ScatterOverlay issues={issues} width={chartWidth} height={chartHeight} thresholds={cycleThresholds} />
+          </svg>
+        ) : (
+          <>
+            <SvgChart
+              buckets={buckets}
+              granularity={granularity}
+              hoveredType={hoveredType}
+              width={chartWidth}
+              height={chartHeight}
+              onHoverBucket={handleHoverBucket}
+              hoveredBucketIndex={hoveredBucketIndex}
+            />
+            <Tooltip
+              bucket={tooltip.bucket}
+              granularity={granularity}
+              x={tooltip.x}
+              y={tooltip.y}
+              visible={tooltip.visible}
+            />
+          </>
+        )}
       </div>
 
       <div class="tp-ma-hint">

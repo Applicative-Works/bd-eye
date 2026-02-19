@@ -119,25 +119,44 @@ describe('Card', () => {
     expect(container.firstChild).toHaveClass('card-dragging')
   })
 
-  test.each([
-    [3, 'card-age-aging'],
-    [7, 'card-age-old'],
-    [14, 'card-age-stale'],
-  ])('has %d-day-old card age class %s', (daysAgo, expectedClass) => {
-    const updated = new Date(Date.now() - daysAgo * 86400000).toISOString()
-    const { container } = render(<Card issue={issueWith({ updated_at: updated })} />)
-    expect(container.firstChild).toHaveClass(expectedClass)
+  test('shows duration badge for open issue', () => {
+    const created = new Date(Date.now() - 3 * 86400000).toISOString()
+    const { container } = render(<Card issue={issueWith({ created_at: created })} />)
+    const badge = container.querySelector('.card-duration')
+    expect(badge).not.toBeNull()
+    expect(badge).toHaveTextContent('3d')
   })
 
-  test('no age class for fresh cards (< 3 days)', () => {
-    const updated = new Date(Date.now() - 1 * 86400000).toISOString()
-    const { container } = render(<Card issue={issueWith({ updated_at: updated })} />)
-    expect(container.firstChild.className).not.toMatch(/card-age/)
+  test('shows cycle time for closed issue', () => {
+    const created = new Date('2026-01-01T00:00:00Z').toISOString()
+    const closed = new Date('2026-01-06T00:00:00Z').toISOString()
+    const { container } = render(<Card issue={issueWith({ status: 'closed', created_at: created, closed_at: closed })} />)
+    const badge = container.querySelector('.card-duration')
+    expect(badge).not.toBeNull()
+    expect(badge).toHaveTextContent('5d')
   })
 
-  test('no age class for closed cards', () => {
-    const updated = new Date(Date.now() - 30 * 86400000).toISOString()
-    const { container } = render(<Card issue={issueWith({ status: 'closed', updated_at: updated })} />)
-    expect(container.firstChild.className).not.toMatch(/card-age/)
+  test('applies warning tier when thresholds exceeded', () => {
+    const created = new Date(Date.now() - 5 * 86400000).toISOString()
+    const thresholds = { median: 3 * 86400000, p75: 7 * 86400000 }
+    const { container } = render(<Card issue={issueWith({ created_at: created })} thresholds={thresholds} />)
+    const badge = container.querySelector('.card-duration')
+    expect(badge).toHaveClass('card-duration-warning')
+  })
+
+  test('applies danger tier when p75 exceeded', () => {
+    const created = new Date(Date.now() - 10 * 86400000).toISOString()
+    const thresholds = { median: 3 * 86400000, p75: 7 * 86400000 }
+    const { container } = render(<Card issue={issueWith({ created_at: created })} thresholds={thresholds} />)
+    const badge = container.querySelector('.card-duration')
+    expect(badge).toHaveClass('card-duration-danger')
+  })
+
+  test('applies normal tier for fresh cards', () => {
+    const created = new Date(Date.now() - 1 * 86400000).toISOString()
+    const thresholds = { median: 3 * 86400000, p75: 7 * 86400000 }
+    const { container } = render(<Card issue={issueWith({ created_at: created })} thresholds={thresholds} />)
+    const badge = container.querySelector('.card-duration')
+    expect(badge).toHaveClass('card-duration-normal')
   })
 })

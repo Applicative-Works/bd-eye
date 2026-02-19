@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, useMemo } from 'preact/hooks'
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, useSensor, useSensors } from '@dnd-kit/core'
 import { Card } from './Card.jsx'
 import { DroppableColumn, DroppableCell } from './DroppableColumn.jsx'
@@ -8,7 +8,8 @@ import { selectIssue } from '../router.js'
 import { useIssues } from '../hooks/useIssues.js'
 import { useFilteredIssues } from '../hooks/useFilteredIssues.js'
 import { apiUrl } from '../projectUrl.js'
-import { closedDays, columnSortOrders, swimlaneGrouping } from '../state.js'
+import { closedDays, columnSortOrders, swimlaneGrouping, cycleTimeThresholds } from '../state.js'
+import { computeThresholds } from '../cycleTime.js'
 
 const RECENCY_OPTIONS = [
   { label: '1d', days: 1 },
@@ -97,7 +98,7 @@ const buildSwimlanes = (columnIssues, grouping) => {
   return sortedKeys.map(k => ({ key: k, label: groupLabel(k, grouping), issues: lanes.get(k) }))
 }
 
-const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle }) => {
+const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle, thresholds }) => {
   const totalCount = columns.reduce((n, col) => n + lane.issues[col.key].length, 0)
   return (
     <div class={`swim-row${collapsed ? ' swim-row-collapsed' : ''}`} role="rowgroup" aria-label={`${lane.label} — ${totalCount} issues`}>
@@ -116,7 +117,7 @@ const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle })
           {lane.issues[col.key].length === 0
             ? <div class="swim-cell-empty">No issues</div>
             : lane.issues[col.key].map(issue => (
-                <Card key={issue.id} issue={issue} onClick={selectIssue} isDragging={activeId === issue.id} />
+                <Card key={issue.id} issue={issue} onClick={selectIssue} isDragging={activeId === issue.id} thresholds={thresholds} />
               ))
           }
         </DroppableCell>
@@ -140,6 +141,13 @@ export const Board = () => {
     ...i,
     blocked_by_count: blockedMap.get(i.id) ?? 0
   }))
+
+  const thresholds = useMemo(() => {
+    const closed = enriched.filter(i => i.status === 'closed')
+    const t = computeThresholds(closed)
+    cycleTimeThresholds.value = t
+    return t
+  }, [enriched])
 
   const filtered = useFilteredIssues(enriched)
 
@@ -263,6 +271,7 @@ export const Board = () => {
                 activeId={activeId}
                 collapsed={collapsedLanes.has(lane.key)}
                 onToggle={() => toggleLane(lane.key)}
+                thresholds={thresholds}
               />
             ))}
           </div>
@@ -286,6 +295,7 @@ export const Board = () => {
                     issue={issue}
                     onClick={selectIssue}
                     isDragging={activeId === issue.id}
+                    thresholds={thresholds}
                   />
                 ))}
               </DroppableColumn>
@@ -295,7 +305,7 @@ export const Board = () => {
         <DragOverlay>
           {activeIssue ? (
             <div class="card-drag-overlay">
-              <Card issue={activeIssue} isOverlay />
+              <Card issue={activeIssue} isOverlay thresholds={thresholds} />
               {activeIssue.blocked_by_count > 0 && (
                 <div class="drag-blocked-warning">Blocked issue</div>
               )}

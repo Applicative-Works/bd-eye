@@ -24,6 +24,8 @@ vi.mock('../../src/client/router.js', () => ({
   initRouter: vi.fn(),
 }))
 
+const cycleTimeThresholdsSignal = signal(null)
+
 vi.mock('../../src/client/state.js', () => ({
   get selectedIssueId() { return signal(null) },
   get currentView() { return signal('board') },
@@ -33,6 +35,7 @@ vi.mock('../../src/client/state.js', () => ({
   get columnMode() { return signal('status') },
   get columnSortOrders() { return columnSortOrdersSignal },
   get swimlaneGrouping() { return swimlaneGroupingSignal },
+  get cycleTimeThresholds() { return cycleTimeThresholdsSignal },
 }))
 
 vi.mock('../../src/client/projectUrl.js', () => ({
