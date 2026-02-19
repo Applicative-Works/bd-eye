@@ -14,3 +14,9 @@ export const columnMode = signal('status')
 export const closedDays = signal(null)
 export const lastUpdated = signal(null)
 export const columnSortOrders = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })
+
+const storedWipLimits = (() => {
+  try { return JSON.parse(localStorage.getItem('wipLimits')) } catch { return null }
+})()
+export const wipLimits = signal(storedWipLimits || { open: null, in_progress: null, closed: null })
+wipLimits.subscribe(v => localStorage.setItem('wipLimits', JSON.stringify(v)))
