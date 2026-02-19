@@ -43,4 +43,12 @@ describe('state signals', () => {
     expect(filters.value.blockedOnly).toBe(true)
     filters.value = original
   })
+
+  test('filters persists to localStorage', () => {
+    const original = filters.value
+    const updated = { ...original, assignee: ['alice'], readyOnly: true }
+    filters.value = updated
+    expect(JSON.parse(localStorage.getItem('bd-eye.filters'))).toEqual(updated)
+    filters.value = original
+  })
 })
