@@ -49,6 +49,15 @@ const WipLimitEditor = ({ columnKey, count }) => {
   )
 }
 
+export const DroppableCell = ({ id, children }) => {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div class={`swim-cell${isOver ? ' swim-cell-drop-active' : ''}`} ref={setNodeRef}>
+      {children}
+    </div>
+  )
+}
+
 export const DroppableColumn = ({ col, count, headerExtra, children }) => {
   const { setNodeRef, isOver } = useDroppable({ id: col.key })
   const limit = wipLimits.value[col.key]

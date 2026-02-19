@@ -1,6 +1,32 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { filters } from '../state.js'
+import { filters, swimlaneGrouping } from '../state.js'
 import { FilterChip } from './FilterChip.jsx'
+
+const GROUPING_OPTIONS = [
+  { value: null, label: 'None' },
+  { value: 'assignee', label: 'Assignee' },
+  { value: 'priority', label: 'Priority' },
+  { value: 'type', label: 'Type' },
+  { value: 'label', label: 'Label' },
+]
+
+const GroupByControl = () => (
+  <div class="group-by-control" role="radiogroup" aria-label="Group board by">
+    <span class="group-by-label">Group:</span>
+    {GROUPING_OPTIONS.map(opt => (
+      <button
+        key={opt.label}
+        role="radio"
+        aria-checked={swimlaneGrouping.value === opt.value}
+        class={`group-by-btn${swimlaneGrouping.value === opt.value ? ' group-by-btn-active' : ''}`}
+        onClick={() => { swimlaneGrouping.value = opt.value }}
+        type="button"
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+)
 
 export const FilterBar = ({ issues }) => {
   const [openDropdown, setOpenDropdown] = useState(null)
@@ -151,6 +177,7 @@ export const FilterBar = ({ issues }) => {
           >
             Ready only
           </button>
+          <GroupByControl />
         </div>
       </div>
       {hasActiveFilters && (

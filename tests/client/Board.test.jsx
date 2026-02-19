@@ -7,6 +7,7 @@ import { signal } from '@preact/signals'
 const closedDaysSignal = signal(null)
 const filtersSignal = signal({ priority: [], type: [], assignee: [], label: [], blockedOnly: false, readyOnly: false })
 const columnSortOrdersSignal = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })
+const swimlaneGroupingSignal = signal(null)
 
 vi.mock('../../src/client/hooks/useIssues.js', () => ({
   useIssues: vi.fn()
@@ -30,6 +31,7 @@ vi.mock('../../src/client/state.js', () => ({
   get closedDays() { return closedDaysSignal },
   get columnMode() { return signal('status') },
   get columnSortOrders() { return columnSortOrdersSignal },
+  get swimlaneGrouping() { return swimlaneGroupingSignal },
 }))
 
 vi.mock('../../src/client/components/SortControl.jsx', () => ({
@@ -67,6 +69,9 @@ vi.mock('../../src/client/components/DroppableColumn.jsx', () => ({
       {children}
     </div>
   ),
+  DroppableCell: ({ id, children }) => (
+    <div data-testid={`cell-${id}`}>{children}</div>
+  ),
 }))
 
 vi.mock('../../src/client/components/FilterBar.jsx', () => ({
@@ -89,6 +94,7 @@ beforeEach(() => {
   capturedDndProps = {}
   closedDaysSignal.value = null
   columnSortOrdersSignal.value = { open: 'priority', in_progress: 'priority', closed: 'priority' }
+  swimlaneGroupingSignal.value = null
   globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }))
   useIssues.mockImplementation((endpoint) => {
     if (endpoint === '/api/issues') {
@@ -354,5 +360,131 @@ describe('priority sorting', () => {
     expect(cards[0]).toHaveTextContent('First')
     expect(cards[1]).toHaveTextContent('Second')
     expect(cards[2]).toHaveTextContent('Third')
+  })
+})
+
+describe('swimlane grouping', () => {
+  const swimlaneIssues = () => [
+    { id: 'S-1', title: 'Dan open', status: 'open', priority: 1, issue_type: 'task', assignee: 'Dan', labels: ['frontend'], created_at: '2025-01-01T00:00:00Z' },
+    { id: 'S-2', title: 'Alice open', status: 'open', priority: 2, issue_type: 'bug', assignee: 'Alice', labels: ['backend'], created_at: '2025-01-02T00:00:00Z' },
+    { id: 'S-3', title: 'Dan progress', status: 'in_progress', priority: 1, issue_type: 'feature', assignee: 'Dan', labels: ['frontend'], created_at: '2025-01-03T00:00:00Z' },
+    { id: 'S-4', title: 'Unassigned open', status: 'open', priority: 3, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-04T00:00:00Z' },
+  ]
+
+  beforeEach(() => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/api/issues') return { issues: swimlaneIssues(), loading: false, refetch: vi.fn() }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+  })
+
+  test('renders flat board when grouping is null', () => {
+    render(<Board />)
+    expect(screen.getByTestId('column-open')).toBeInTheDocument()
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument()
+  })
+
+  test('renders swimlane grid when grouping is set', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    expect(container.querySelector('.board-swimlane')).toBeInTheDocument()
+    expect(container.querySelector('.board')).toBeNull()
+  })
+
+  test('creates swimlane rows per assignee', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const rows = container.querySelectorAll('.swim-row')
+    expect(rows).toHaveLength(3)
+    const names = [...container.querySelectorAll('.swim-row-name')].map(n => n.textContent)
+    expect(names).toEqual(['Alice', 'Dan', 'Unassigned'])
+  })
+
+  test('places issues in correct swimlane cells', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    render(<Board />)
+    expect(screen.getByTestId('card-S-1')).toBeInTheDocument()
+    expect(screen.getByTestId('card-S-2')).toBeInTheDocument()
+    expect(screen.getByTestId('card-S-3')).toBeInTheDocument()
+    expect(screen.getByTestId('card-S-4')).toBeInTheDocument()
+  })
+
+  test('shows issue count per swimlane row', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const counts = [...container.querySelectorAll('.swim-row-count')].map(c => c.textContent)
+    expect(counts).toEqual(['1 issue', '2 issues', '1 issue'])
+  })
+
+  test('renders column headers in swimlane mode', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const headers = [...container.querySelectorAll('.swim-col-label')].map(h => h.textContent)
+    expect(headers).toEqual(['Open', 'In Progress', 'Closed'])
+  })
+
+  test('shows empty cell message when no issues in cell', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const empties = container.querySelectorAll('.swim-cell-empty')
+    expect(empties.length).toBeGreaterThan(0)
+    expect(empties[0]).toHaveTextContent('No issues')
+  })
+
+  test('groups by priority', () => {
+    swimlaneGroupingSignal.value = 'priority'
+    const { container } = render(<Board />)
+    const names = [...container.querySelectorAll('.swim-row-name')].map(n => n.textContent)
+    expect(names[0]).toContain('P1')
+    expect(names[1]).toContain('P2')
+    expect(names[2]).toContain('P3')
+  })
+
+  test('shows priority dots when grouping by priority', () => {
+    swimlaneGroupingSignal.value = 'priority'
+    const { container } = render(<Board />)
+    expect(container.querySelectorAll('.swim-priority-dot').length).toBeGreaterThan(0)
+  })
+
+  test('groups by type', () => {
+    swimlaneGroupingSignal.value = 'type'
+    const { container } = render(<Board />)
+    const names = [...container.querySelectorAll('.swim-row-name')].map(n => n.textContent)
+    expect(names).toEqual(['bug', 'feature', 'task'])
+  })
+
+  test('groups by label', () => {
+    swimlaneGroupingSignal.value = 'label'
+    const { container } = render(<Board />)
+    const names = [...container.querySelectorAll('.swim-row-name')].map(n => n.textContent)
+    expect(names).toEqual(['backend', 'frontend', 'Unlabelled'])
+  })
+
+  test('Unassigned lane sorts last', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const names = [...container.querySelectorAll('.swim-row-name')].map(n => n.textContent)
+    expect(names[names.length - 1]).toBe('Unassigned')
+  })
+
+  test('collapsing a lane hides its cells', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const chevrons = container.querySelectorAll('.swim-chevron')
+    fireEvent.click(chevrons[0].closest('.swim-row-header'))
+    const firstRow = container.querySelectorAll('.swim-row')[0]
+    expect(firstRow).toHaveClass('swim-row-collapsed')
+    expect(firstRow.querySelectorAll('.swim-cell')).toHaveLength(0)
+  })
+
+  test('expanding a collapsed lane shows cells again', () => {
+    swimlaneGroupingSignal.value = 'assignee'
+    const { container } = render(<Board />)
+    const header = container.querySelectorAll('.swim-row-header')[0]
+    fireEvent.click(header)
+    fireEvent.click(header)
+    const firstRow = container.querySelectorAll('.swim-row')[0]
+    expect(firstRow).not.toHaveClass('swim-row-collapsed')
+    expect(firstRow.querySelectorAll('[data-testid^="cell-"]').length).toBeGreaterThan(0)
   })
 })

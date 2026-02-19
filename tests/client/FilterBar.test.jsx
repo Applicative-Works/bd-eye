@@ -2,7 +2,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
 import '@testing-library/jest-dom/vitest'
-import { filters } from '../../src/client/state.js'
+import { filters, swimlaneGrouping } from '../../src/client/state.js'
 import { FilterBar } from '../../src/client/components/FilterBar.jsx'
 
 const defaultFilters = {
@@ -21,8 +21,12 @@ const mockIssues = [
   { assignee: null },
 ]
 
+const filterBtn = (container, label) =>
+  [...container.querySelectorAll('.filter-btn')].find(b => b.textContent.match(new RegExp(`^${label}`)))
+
 beforeEach(() => {
   filters.value = { ...defaultFilters }
+  swimlaneGrouping.value = null
   globalThis.fetch = vi.fn(() =>
     Promise.resolve({ json: () => Promise.resolve({ data: ['frontend', 'backend', 'urgent'] }) })
   )
@@ -37,8 +41,8 @@ describe('FilterBar', () => {
     ['Assignee'],
     ['Label'],
   ])('renders %s dropdown button', (label) => {
-    render(<FilterBar issues={mockIssues} />)
-    expect(screen.getByText(new RegExp(`^${label}`))).toBeInTheDocument()
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    expect(filterBtn(container, label)).toBeInTheDocument()
   })
 
   test.each([
@@ -50,39 +54,39 @@ describe('FilterBar', () => {
   })
 
   test('opens priority dropdown when clicked', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Priority/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Priority'))
     expect(screen.getByText('P0')).toBeInTheDocument()
   })
 
   test('closes priority dropdown when another dropdown is opened', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Priority/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Priority'))
     expect(screen.getByText('P0')).toBeInTheDocument()
-    fireEvent.click(screen.getByText(/^Type/))
+    fireEvent.click(filterBtn(container, 'Type'))
     expect(screen.queryByText('P0')).not.toBeInTheDocument()
     expect(screen.getByText('bug')).toBeInTheDocument()
   })
 
   test('closes dropdown on Escape key', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Priority/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Priority'))
     expect(screen.getByText('P0')).toBeInTheDocument()
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByText('P0')).not.toBeInTheDocument()
   })
 
   test('closes dropdown on click outside', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Priority/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Priority'))
     expect(screen.getByText('P0')).toBeInTheDocument()
     fireEvent.mouseDown(document.body)
     expect(screen.queryByText('P0')).not.toBeInTheDocument()
   })
 
   test('selecting a priority filter updates the signal', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Priority/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Priority'))
     fireEvent.click(screen.getByText('P1'))
     expect(filters.value.priority).toEqual([1])
   })
@@ -90,7 +94,7 @@ describe('FilterBar', () => {
   test('deselecting a priority filter removes it from the signal', () => {
     filters.value = { ...defaultFilters, priority: [2] }
     const { container } = render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Priority/))
+    fireEvent.click(filterBtn(container, 'Priority'))
     const dropdown = container.querySelector('.filter-dropdown')
     const checkbox = dropdown.querySelector('input[type="checkbox"]:checked')
     fireEvent.click(checkbox)
@@ -98,25 +102,25 @@ describe('FilterBar', () => {
   })
 
   test('selecting a type filter updates the signal', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Type/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Type'))
     fireEvent.click(screen.getByText('bug'))
     expect(filters.value.type).toEqual(['bug'])
   })
 
   test('shows assignees derived from issues', () => {
-    render(<FilterBar issues={mockIssues} />)
-    fireEvent.click(screen.getByText(/^Assignee/))
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    fireEvent.click(filterBtn(container, 'Assignee'))
     expect(screen.getByText('Alice')).toBeInTheDocument()
     expect(screen.getByText('Bob')).toBeInTheDocument()
   })
 
   test('fetches labels on mount', async () => {
-    render(<FilterBar issues={mockIssues} />)
+    const { container } = render(<FilterBar issues={mockIssues} />)
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith('/api/labels')
     })
-    fireEvent.click(screen.getByText(/^Label/))
+    fireEvent.click(filterBtn(container, 'Label'))
     expect(screen.getByText('frontend')).toBeInTheDocument()
     expect(screen.getByText('backend')).toBeInTheDocument()
   })
@@ -157,8 +161,8 @@ describe('FilterBar', () => {
 
   test('dropdown button shows selection count', () => {
     filters.value = { ...defaultFilters, priority: [1, 2] }
-    render(<FilterBar issues={mockIssues} />)
-    expect(screen.getByText(/Priority \(2\)/)).toBeInTheDocument()
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    expect(filterBtn(container, 'Priority')).toHaveTextContent(/Priority \(2\)/)
   })
 
   test('removing a filter chip updates the signal', () => {
@@ -180,8 +184,43 @@ describe('FilterBar', () => {
 
   test('handles label fetch failure gracefully', async () => {
     globalThis.fetch = vi.fn(() => Promise.reject(new Error('fail')))
-    render(<FilterBar issues={mockIssues} />)
+    const { container } = render(<FilterBar issues={mockIssues} />)
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
-    fireEvent.click(screen.getByText(/^Label/))
+    fireEvent.click(filterBtn(container, 'Label'))
+  })
+})
+
+describe('GroupByControl', () => {
+  test('renders group-by buttons', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const btns = container.querySelectorAll('.group-by-btn')
+    expect(btns).toHaveLength(5)
+    expect(btns[0]).toHaveTextContent('None')
+    expect(btns[1]).toHaveTextContent('Assignee')
+    expect(btns[2]).toHaveTextContent('Priority')
+    expect(btns[3]).toHaveTextContent('Type')
+    expect(btns[4]).toHaveTextContent('Label')
+  })
+
+  test('None is active by default', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const active = container.querySelector('.group-by-btn-active')
+    expect(active).toHaveTextContent('None')
+  })
+
+  test('clicking a grouping option updates the signal', () => {
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const btns = container.querySelectorAll('.group-by-btn')
+    fireEvent.click(btns[1])
+    expect(swimlaneGrouping.value).toBe('assignee')
+    expect(btns[1]).toHaveClass('group-by-btn-active')
+  })
+
+  test('clicking None clears grouping', () => {
+    swimlaneGrouping.value = 'assignee'
+    const { container } = render(<FilterBar issues={mockIssues} />)
+    const btns = container.querySelectorAll('.group-by-btn')
+    fireEvent.click(btns[0])
+    expect(swimlaneGrouping.value).toBeNull()
   })
 })

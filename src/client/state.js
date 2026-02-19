@@ -14,6 +14,7 @@ export const columnMode = signal('status')
 export const closedDays = signal(null)
 export const lastUpdated = signal(null)
 export const columnSortOrders = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })
+export const swimlaneGrouping = signal(null)
 
 const storedWipLimits = (() => {
   try { return JSON.parse(localStorage.getItem('wipLimits')) } catch { return null }
