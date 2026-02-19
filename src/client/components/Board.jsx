@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks'
-import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, pointerWithin, useSensor, useSensors } from '@dnd-kit/core'
 import { Card } from './Card.jsx'
 import { DroppableColumn } from './DroppableColumn.jsx'
 import { FilterBar } from './FilterBar.jsx'
@@ -45,6 +45,7 @@ export const Board = () => {
   const { issues, loading } = useIssues('/api/issues')
   const { issues: blockedList } = useIssues('/api/issues/blocked')
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [activeId, setActiveId] = useState(null)
   const [optimisticMoves, setOptimisticMoves] = useState(new Map())
 
@@ -133,6 +134,7 @@ export const Board = () => {
     <>
       <FilterBar issues={enriched} />
       <DndContext
+        sensors={sensors}
         collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
