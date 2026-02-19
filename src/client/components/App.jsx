@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { currentView, selectedIssueId } from '../state.js'
 import { initRouter, navigate, clearSelection, selectIssue } from '../router.js'
 import { NavBar } from './NavBar.jsx'
+import { UpdatedAt } from './UpdatedAt.jsx'
 import { Board } from './Board.jsx'
 import { ReadyQueue } from './ReadyQueue.jsx'
 import { EpicExplorer } from './EpicExplorer.jsx'
@@ -72,6 +73,7 @@ export const App = () => {
           onSelect={(id) => selectIssue(id)}
         />
       )}
+      <UpdatedAt />
     </div>
   )
 }

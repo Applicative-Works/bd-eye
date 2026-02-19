@@ -1343,3 +1343,20 @@
   border-radius: 0 0 6px 6px;
   text-align: center;
 }
+
+.updated-at {
+  position: fixed;
+  bottom: var(--space-3);
+  right: var(--space-4);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: #4a5568;
+  transition: color 2200ms ease-out;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.updated-at-active {
+  color: #68d391;
+  transition: none;
+}

@@ -7,9 +7,12 @@ import { signal } from '@preact/signals'
 const currentView = signal('board')
 const selectedIssueId = signal(null)
 
+const lastUpdated = signal(null)
+
 vi.mock('../../src/client/state.js', () => ({
   get currentView() { return currentView },
   get selectedIssueId() { return selectedIssueId },
+  get lastUpdated() { return lastUpdated },
 }))
 
 vi.mock('../../src/client/router.js', () => ({
@@ -45,6 +48,10 @@ vi.mock('../../src/client/components/DetailPanel.jsx', () => ({
 
 vi.mock('../../src/client/components/SearchModal.jsx', () => ({
   SearchModal: () => <div data-testid="search-modal">SearchModal</div>,
+}))
+
+vi.mock('../../src/client/components/UpdatedAt.jsx', () => ({
+  UpdatedAt: () => <div data-testid="updated-at" />,
 }))
 
 import { App } from '../../src/client/components/App.jsx'
