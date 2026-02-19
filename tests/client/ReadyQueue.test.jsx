@@ -43,7 +43,7 @@ describe('ReadyQueue', () => {
 
   test('calls useIssues with ready endpoint', () => {
     render(<ReadyQueue />)
-    expect(useIssues).toHaveBeenCalledWith('/api/issues/ready')
+    expect(useIssues).toHaveBeenCalledWith('/issues/ready')
   })
 
   test('renders heading with issue count', () => {

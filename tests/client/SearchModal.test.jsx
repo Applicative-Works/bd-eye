@@ -2,6 +2,11 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
 import '@testing-library/jest-dom/vitest'
+
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/test-project${path}`
+}))
+
 import { SearchModal } from '../../src/client/components/SearchModal.jsx'
 
 const mockResults = [
@@ -63,7 +68,7 @@ describe('SearchModal', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled()
     vi.advanceTimersByTime(300)
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith('/api/search?q=fix')
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/search?q=fix')
     })
   })
 

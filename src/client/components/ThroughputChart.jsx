@@ -410,7 +410,7 @@ const TypeBreakdownRow = ({ type, buckets, total }) => {
 }
 
 export const ThroughputChart = () => {
-  const { issues, loading } = useIssues('/api/issues')
+  const { issues, loading } = useIssues('/issues')
   const [granularity, setGranularity] = useState('week')
   const [hoveredType, setHoveredType] = useState(null)
   const [hoveredBucketIndex, setHoveredBucketIndex] = useState(null)

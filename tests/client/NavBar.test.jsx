@@ -2,6 +2,16 @@
 import { describe, test, expect, vi, afterEach } from 'vitest'
 import { render, cleanup, fireEvent } from '@testing-library/preact'
 import '@testing-library/jest-dom/vitest'
+import { signal } from '@preact/signals'
+
+vi.mock('../../src/client/state.js', () => ({
+  get currentProject() { return signal('test-project') },
+  get projectList() { return signal([
+    { name: 'test-project', issueCount: 5 },
+    { name: 'other-project', issueCount: 10 },
+  ]) },
+}))
+
 import { NavBar } from '../../src/client/components/NavBar.jsx'
 
 afterEach(cleanup)
@@ -24,6 +34,11 @@ describe('NavBar', () => {
   test('renders keyboard shortcut hint', () => {
     const { container } = render(<NavBar currentView="board" onNavigate={() => {}} />)
     expect(container.querySelector('.nav-search-hint')).toHaveTextContent('\u2318K')
+  })
+
+  test('renders ProjectSwitcher', () => {
+    const { container } = render(<NavBar currentView="board" onNavigate={() => {}} />)
+    expect(container.querySelector('.project-switcher')).not.toBeNull()
   })
 
   test.each(TABS.map(t => [t.id, t.label]))(

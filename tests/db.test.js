@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { doltConfig, openDb } from '../src/server/db.js'
+import { doltConfig, openDb, SYSTEM_DBS } from '../src/server/db.js'
 
 afterEach(() => {
   vi.unstubAllEnvs()
+})
+
+describe('SYSTEM_DBS', () => {
+  it('contains the expected system databases', () => {
+    expect(SYSTEM_DBS).toEqual(new Set(['information_schema', 'mysql', 'sys', 'performance_schema']))
+  })
 })
 
 describe('doltConfig', () => {

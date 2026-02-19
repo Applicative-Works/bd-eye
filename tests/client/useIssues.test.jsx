@@ -4,13 +4,19 @@ import { renderHook, waitFor } from '@testing-library/preact'
 import { signal } from '@preact/signals'
 
 const lastUpdated = signal(null)
+const currentProject = signal('my-project')
 
 vi.mock('../../src/client/state.js', () => ({
   get lastUpdated() { return lastUpdated },
+  get currentProject() { return currentProject },
 }))
 
 vi.mock('../../src/client/hooks/useLiveUpdates.js', () => ({
   useLiveUpdates: vi.fn()
+}))
+
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/${currentProject.value}${path}`
 }))
 
 import { useIssues } from '../../src/client/hooks/useIssues.js'
@@ -24,6 +30,7 @@ const mockData = [
 beforeEach(() => {
   vi.restoreAllMocks()
   lastUpdated.value = null
+  currentProject.value = 'my-project'
   globalThis.fetch = vi.fn(() =>
     Promise.resolve({
       json: () => Promise.resolve({ data: mockData })
@@ -38,17 +45,17 @@ describe('useIssues', () => {
     expect(result.current.issues).toEqual([])
   })
 
-  test('fetches from default endpoint and populates issues', async () => {
+  test('fetches from project-aware default endpoint', async () => {
     const { result } = renderHook(() => useIssues())
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.issues).toEqual(mockData)
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/issues')
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/my-project/issues')
   })
 
-  test('fetches from custom endpoint', async () => {
-    const { result } = renderHook(() => useIssues('/api/other'))
+  test('fetches from custom path with project prefix', async () => {
+    const { result } = renderHook(() => useIssues('/issues/blocked'))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/other')
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/my-project/issues/blocked')
   })
 
   test('registers refetch callback with useLiveUpdates', () => {

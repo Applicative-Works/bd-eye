@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { Badge } from './Badge.jsx'
 import { CopyableId } from './CopyableId.jsx'
 import { selectIssue } from '../router.js'
+import { apiUrl } from '../projectUrl.js'
 import { useLiveUpdates } from '../hooks/useLiveUpdates.js'
 
 const statusIcon = (status) => {
@@ -72,7 +73,7 @@ export const EpicExplorer = () => {
   const [loading, setLoading] = useState(true)
 
   const fetchEpics = useCallback(async () => {
-    const res = await fetch('/api/epics')
+    const res = await fetch(apiUrl('/epics'))
     const { data } = await res.json()
     setEpics(data)
     setLoading(false)
@@ -88,7 +89,7 @@ export const EpicExplorer = () => {
     } else {
       next.add(epicId)
       if (!children[epicId]) {
-        const res = await fetch(`/api/epics/${epicId}/children`)
+        const res = await fetch(apiUrl(`/epics/${epicId}/children`))
         const { data } = await res.json()
         setChildren(prev => ({ ...prev, [epicId]: data }))
       }

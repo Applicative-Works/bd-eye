@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useReducer } from 'preact/hooks'
 import dagre from 'dagre'
 import { selectedIssueId } from '../state.js'
 import { selectIssue } from '../router.js'
+import { apiUrl } from '../projectUrl.js'
 import { CopyableId } from './CopyableId.jsx'
 
 /**
@@ -56,7 +57,7 @@ const FocusView = ({ issueId }) => {
     }
 
     setLoading(true)
-    fetch(`/api/issues/${issueId}/dependencies`)
+    fetch(apiUrl(`/issues/${issueId}/dependencies`))
       .then(res => res.json())
       .then(({ data }) => setDeps(data))
       .catch(() => setDeps({ blockedBy: [], blocks: [] }))
@@ -71,7 +72,7 @@ const FocusView = ({ issueId }) => {
       return
     }
 
-    fetch(`/api/issues/${issueId}`)
+    fetch(apiUrl(`/issues/${issueId}`))
       .then(res => res.json())
       .then(({ data }) => setSelectedIssue(data))
       .catch(() => setSelectedIssue(null))
@@ -224,8 +225,8 @@ const FullGraphView = () => {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      fetch('/api/issues').then(r => r.json()),
-      fetch('/api/issues/blocked').then(r => r.json()),
+      fetch(apiUrl('/issues')).then(r => r.json()),
+      fetch(apiUrl('/issues/blocked')).then(r => r.json()),
     ])
       .then(([issuesRes, blockedRes]) => {
         const allIssues = issuesRes.data || []
@@ -235,7 +236,7 @@ const FullGraphView = () => {
 
         return Promise.all(
           Array.from(blocked).map(id =>
-            fetch(`/api/issues/${id}/dependencies`)
+            fetch(apiUrl(`/issues/${id}/dependencies`))
               .then(r => r.json())
               .then(({ data }) => ({ id, blockers: (data.blockedBy || []).map(b => b.id) }))
           )
@@ -408,7 +409,7 @@ export const DependencyGraph = () => {
       return
     }
 
-    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    fetch(apiUrl(`/search?q=${encodeURIComponent(q)}`))
       .then(r => r.json())
       .then(({ data }) => { setSearchResults(data || []); setSelectedIndex(0) })
       .catch(() => setSearchResults([]))
@@ -447,7 +448,7 @@ export const DependencyGraph = () => {
 
   useEffect(() => {
     if (selectedIssueId.value) {
-      fetch(`/api/issues/${selectedIssueId.value}`)
+      fetch(apiUrl(`/issues/${selectedIssueId.value}`))
         .then(r => r.json())
         .then(({ data }) => {
           if (data) {

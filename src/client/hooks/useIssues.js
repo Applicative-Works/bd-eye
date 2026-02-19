@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { lastUpdated } from '../state.js'
+import { apiUrl } from '../projectUrl.js'
 import { useLiveUpdates } from './useLiveUpdates.js'
 
-export const useIssues = (endpoint = '/api/issues') => {
+export const useIssues = (path = '/issues') => {
   const [issues, setIssues] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const endpoint = apiUrl(path)
 
   const fetch_ = useCallback(async () => {
     const res = await fetch(endpoint)

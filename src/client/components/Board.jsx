@@ -7,6 +7,7 @@ import { SortControl } from './SortControl.jsx'
 import { selectIssue } from '../router.js'
 import { useIssues } from '../hooks/useIssues.js'
 import { useFilteredIssues } from '../hooks/useFilteredIssues.js'
+import { apiUrl } from '../projectUrl.js'
 import { closedDays, columnSortOrders, swimlaneGrouping } from '../state.js'
 
 const RECENCY_OPTIONS = [
@@ -124,8 +125,8 @@ const SwimlaneRow = ({ lane, grouping, columns, activeId, collapsed, onToggle })
 }
 
 export const Board = () => {
-  const { issues, loading } = useIssues('/api/issues')
-  const { issues: blockedList } = useIssues('/api/issues/blocked')
+  const { issues, loading } = useIssues('/issues')
+  const { issues: blockedList } = useIssues('/issues/blocked')
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [activeId, setActiveId] = useState(null)
@@ -194,7 +195,7 @@ export const Board = () => {
     })
 
     try {
-      const res = await fetch(`/api/issues/${issueId}/status`, {
+      const res = await fetch(apiUrl(`/issues/${issueId}/status`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })

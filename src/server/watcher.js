@@ -1,10 +1,12 @@
 /**
- * @param {{ host?: string, port?: number, user?: string, password?: string, database?: string }} config
- * @param {() => void} onChange
+ * @param {{ host?: string, port?: number, user?: string, password?: string }} config
+ * @param {{ listProjects: () => Promise<{ name: string }[]> }} registry
+ * @param {(event: string) => void} onChange
  * @returns {{ close: () => Promise<void> }}
  */
-export const createWatcher = (config, onChange) => {
-  let lastHash = ''
+export const createWatcher = (config, registry, onChange) => {
+  /** @type {Map<string, string>} */
+  const lastHashes = new Map()
   let stopped = false
 
   const poll = async () => {
@@ -14,16 +16,21 @@ export const createWatcher = (config, onChange) => {
         host: config.host ?? '127.0.0.1',
         port: config.port ?? 3306,
         user: config.user ?? 'root',
-        password: config.password ?? '',
-        database: config.database ?? 'beads'
+        password: config.password ?? ''
       })
 
       while (!stopped) {
         try {
-          const [rows] = await conn.query("SELECT DOLT_HASHOF_DB() AS hash")
-          const hash = /** @type {any[]} */ (rows)[0]?.hash ?? ''
-          if (lastHash && hash !== lastHash) onChange()
-          lastHash = hash
+          const projects = await registry.listProjects()
+          for (const { name } of projects) {
+            try {
+              const [rows] = await conn.query(`SELECT DOLT_HASHOF_DB('${name}') AS hash`)
+              const hash = /** @type {any[]} */ (rows)[0]?.hash ?? ''
+              const lastHash = lastHashes.get(name) ?? ''
+              if (lastHash && hash !== lastHash) onChange(JSON.stringify({ project: name }))
+              lastHashes.set(name, hash)
+            } catch { /* skip individual db errors */ }
+          }
         } catch { /* query failed, retry next cycle */ }
         await new Promise((r) => setTimeout(r, 2000))
       }

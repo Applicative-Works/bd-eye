@@ -27,11 +27,16 @@ vi.mock('../../src/client/router.js', () => ({
 vi.mock('../../src/client/state.js', () => ({
   get selectedIssueId() { return signal(null) },
   get currentView() { return signal('board') },
+  get currentProject() { return signal('test-project') },
   get filters() { return filtersSignal },
   get closedDays() { return closedDaysSignal },
   get columnMode() { return signal('status') },
   get columnSortOrders() { return columnSortOrdersSignal },
   get swimlaneGrouping() { return swimlaneGroupingSignal },
+}))
+
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/test-project${path}`
 }))
 
 vi.mock('../../src/client/components/SortControl.jsx', () => ({
@@ -97,7 +102,7 @@ beforeEach(() => {
   swimlaneGroupingSignal.value = null
   globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }))
   useIssues.mockImplementation((endpoint) => {
-    if (endpoint === '/api/issues') {
+    if (endpoint === '/issues') {
       return { issues: makeIssues(), loading: false, refetch: vi.fn() }
     }
     return { issues: [], loading: false, refetch: vi.fn() }
@@ -149,10 +154,10 @@ describe('Board', () => {
 
   test('enriches issues with blocked_by_count from blocked endpoint', () => {
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') {
+      if (endpoint === '/issues') {
         return { issues: makeIssues(), loading: false, refetch: vi.fn() }
       }
-      if (endpoint === '/api/issues/blocked') {
+      if (endpoint === '/issues/blocked') {
         return { issues: [{ id: 'P-1', blocked_by_count: 3 }], loading: false, refetch: vi.fn() }
       }
       return { issues: [], loading: false, refetch: vi.fn() }
@@ -163,8 +168,8 @@ describe('Board', () => {
 
   test('calls useIssues with correct endpoints', () => {
     render(<Board />)
-    expect(useIssues).toHaveBeenCalledWith('/api/issues')
-    expect(useIssues).toHaveBeenCalledWith('/api/issues/blocked')
+    expect(useIssues).toHaveBeenCalledWith('/issues')
+    expect(useIssues).toHaveBeenCalledWith('/issues/blocked')
   })
 })
 
@@ -193,7 +198,7 @@ describe('recency toggle', () => {
   test('filters closed issues by recency', () => {
     const now = Date.now()
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') {
+      if (endpoint === '/issues') {
         return {
           issues: [
             { id: 'R-1', title: 'Recent', status: 'closed', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z', closed_at: new Date(now - 6 * 3600000).toISOString() },
@@ -247,7 +252,7 @@ describe('drag and drop handlers', () => {
   test('onDragEnd to different column patches status', async () => {
     render(<Board />)
     await act(async () => capturedDndProps.onDragEnd({ active: { id: 'P-1' }, over: { id: 'in_progress' } }))
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/issues/P-1/status', {
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/P-1/status', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'in_progress' })
@@ -279,7 +284,7 @@ describe('sort controls', () => {
 
   test('sort by age orders oldest first', () => {
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') {
+      if (endpoint === '/issues') {
         return {
           issues: [
             { id: 'S-1', title: 'Newer', status: 'open', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-06-01T00:00:00Z' },
@@ -299,7 +304,7 @@ describe('sort controls', () => {
 
   test('sort by assignee orders alphabetically', () => {
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') {
+      if (endpoint === '/issues') {
         return {
           issues: [
             { id: 'S-1', title: 'Dan card', status: 'open', priority: 1, issue_type: 'task', assignee: 'Dan', labels: [], created_at: '2025-01-01T00:00:00Z' },
@@ -319,7 +324,7 @@ describe('sort controls', () => {
 
   test('sort by type groups by issue type', () => {
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') {
+      if (endpoint === '/issues') {
         return {
           issues: [
             { id: 'S-1', title: 'A task', status: 'open', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z' },
@@ -341,7 +346,7 @@ describe('sort controls', () => {
 describe('priority sorting', () => {
   test('sorts issues within a column by priority then created_at', () => {
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') {
+      if (endpoint === '/issues') {
         return {
           issues: [
             { id: 'P-B', title: 'Second', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z' },
@@ -373,7 +378,7 @@ describe('swimlane grouping', () => {
 
   beforeEach(() => {
     useIssues.mockImplementation((endpoint) => {
-      if (endpoint === '/api/issues') return { issues: swimlaneIssues(), loading: false, refetch: vi.fn() }
+      if (endpoint === '/issues') return { issues: swimlaneIssues(), loading: false, refetch: vi.fn() }
       return { issues: [], loading: false, refetch: vi.fn() }
     })
   })

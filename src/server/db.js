@@ -49,7 +49,7 @@
  * }} Db
  */
 
-const SYSTEM_DBS = new Set(['information_schema', 'mysql', 'sys', 'performance_schema'])
+export const SYSTEM_DBS = new Set(['information_schema', 'mysql', 'sys', 'performance_schema'])
 
 /** @param {{ host: string, port: number, user: string, password: string }} config */
 const discoverDoltDatabase = async (config) => {

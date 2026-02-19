@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { filters, swimlaneGrouping } from '../state.js'
+import { apiUrl } from '../projectUrl.js'
 import { FilterChip } from './FilterChip.jsx'
 
 const GROUPING_OPTIONS = [
@@ -34,7 +35,7 @@ export const FilterBar = ({ issues }) => {
   const dropdownRef = useRef(null)
 
   useEffect(() => {
-    fetch('/api/labels')
+    fetch(apiUrl('/labels'))
       .then(r => r.json())
       .then(({ data }) => setLabels(data))
       .catch(() => setLabels([]))

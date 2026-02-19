@@ -5,7 +5,7 @@ import { CopyableId } from './CopyableId.jsx'
 import { selectIssue } from '../router.js'
 
 export const ReadyQueue = () => {
-  const { issues, loading } = useIssues('/api/issues/ready')
+  const { issues, loading } = useIssues('/issues/ready')
   const [selectedIdx, setSelectedIdx] = useState(-1)
 
   useEffect(() => {

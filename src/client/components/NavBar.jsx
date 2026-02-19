@@ -1,3 +1,5 @@
+import { ProjectSwitcher } from './ProjectSwitcher.jsx'
+
 const TABS = [
   { id: 'board', label: 'Board' },
   { id: 'ready', label: 'Ready' },
@@ -7,7 +9,6 @@ const TABS = [
   { id: 'throughput', label: 'Throughput' },
 ]
 
-/** @param {{ currentView: string, onNavigate: (view: string) => void }} props */
 export const NavBar = ({ currentView, onNavigate }) => {
   const handleTabClick = (e, viewId) => {
     e.preventDefault()
@@ -17,6 +18,8 @@ export const NavBar = ({ currentView, onNavigate }) => {
   return (
     <header class="nav-bar">
       <span class="nav-title font-semibold">Beady Eye</span>
+
+      <ProjectSwitcher />
 
       <nav class="nav-tabs">
         {TABS.map(tab => (
@@ -32,7 +35,7 @@ export const NavBar = ({ currentView, onNavigate }) => {
       </nav>
 
       <div class="ml-auto nav-search-hint">
-        <span class="text-tertiary text-sm font-mono">⌘K</span>
+        <span class="text-tertiary text-sm font-mono">{'\u2318'}K</span>
       </div>
     </header>
   )

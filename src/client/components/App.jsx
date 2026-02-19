@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
-import { currentView, selectedIssueId } from '../state.js'
+import { currentView, selectedIssueId, projectList, projectsLoading } from '../state.js'
 import { initRouter, navigate, clearSelection, selectIssue } from '../router.js'
+import { useProjects } from '../hooks/useProjects.js'
 import { NavBar } from './NavBar.jsx'
 import { UpdatedAt } from './UpdatedAt.jsx'
 import { Board } from './Board.jsx'
@@ -17,6 +18,8 @@ const getVisibleCards = () => Array.from(document.querySelectorAll('.card[data-c
 export const App = () => {
   const [showSearch, setShowSearch] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(-1)
+
+  useProjects()
 
   useEffect(() => {
     initRouter()
@@ -142,31 +145,48 @@ export const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  const loading = projectsLoading.value
+  const projects = projectList.value
   const view = currentView.value
 
   return (
     <div class="app">
       <NavBar currentView={view} onNavigate={navigate} />
-      <main class={`content${view === 'board' ? ' content-board' : ''}`}>
-        {view === 'board' && <Board />}
-        {view === 'ready' && <ReadyQueue />}
-        {view === 'epics' && <EpicExplorer />}
-        {view === 'deps' && <DependencyGraph />}
-        {view === 'activity' && <ActivityFeed />}
-        {view === 'throughput' && <ThroughputChart />}
-      </main>
-      {selectedIssueId.value && (
-        <DetailPanel
-          issueId={selectedIssueId.value}
-          onClose={clearSelection}
-          onSelectIssue={selectIssue}
-        />
-      )}
-      {showSearch && (
-        <SearchModal
-          onClose={() => setShowSearch(false)}
-          onSelect={(id) => selectIssue(id)}
-        />
+      {loading ? (
+        <main class="content">
+          <p class="text-secondary">Loading projects...</p>
+        </main>
+      ) : projects.length === 0 ? (
+        <main class="content">
+          <div class="flex flex-col items-center justify-center" style="height: 100%; gap: var(--space-4)">
+            <p class="text-secondary">No beads projects found</p>
+            <button class="filter-btn" onClick={() => window.location.reload()}>Refresh</button>
+          </div>
+        </main>
+      ) : (
+        <>
+          <main class={`content${view === 'board' ? ' content-board' : ''}`}>
+            {view === 'board' && <Board />}
+            {view === 'ready' && <ReadyQueue />}
+            {view === 'epics' && <EpicExplorer />}
+            {view === 'deps' && <DependencyGraph />}
+            {view === 'activity' && <ActivityFeed />}
+            {view === 'throughput' && <ThroughputChart />}
+          </main>
+          {selectedIssueId.value && (
+            <DetailPanel
+              issueId={selectedIssueId.value}
+              onClose={clearSelection}
+              onSelectIssue={selectIssue}
+            />
+          )}
+          {showSearch && (
+            <SearchModal
+              onClose={() => setShowSearch(false)}
+              onSelect={(id) => selectIssue(id)}
+            />
+          )}
+        </>
       )}
       <UpdatedAt />
     </div>

@@ -2,6 +2,11 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/preact'
 import '@testing-library/jest-dom/vitest'
+
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/test-project${path}`
+}))
+
 import { filters, swimlaneGrouping } from '../../src/client/state.js'
 import { FilterBar } from '../../src/client/components/FilterBar.jsx'
 
@@ -118,7 +123,7 @@ describe('FilterBar', () => {
   test('fetches labels on mount', async () => {
     const { container } = render(<FilterBar issues={mockIssues} />)
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith('/api/labels')
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/labels')
     })
     fireEvent.click(filterBtn(container, 'Label'))
     expect(screen.getByText('frontend')).toBeInTheDocument()

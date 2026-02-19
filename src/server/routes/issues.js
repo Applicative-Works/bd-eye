@@ -19,11 +19,17 @@ const attachLabels = async (db, issues) => {
   return issues.map((issue) => ({ ...issue, labels: map.get(issue.id) ?? [] }))
 }
 
-/** @param {import('../db.js').Db} db */
-export const issueRoutes = (db) => {
+/** @param {(name: string) => Promise<import('../db.js').Db>} dbFor */
+export const issueRoutes = (dbFor) => {
   const router = new Hono()
 
+  router.use('/*', async (c, next) => {
+    c.set('db', await dbFor(c.req.param('project')))
+    await next()
+  })
+
   router.get('/issues', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const status = c.req.query('status')
     const priority = c.req.query('priority')
     const type = c.req.query('type')
@@ -41,16 +47,19 @@ export const issueRoutes = (db) => {
   })
 
   router.get('/issues/ready', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const data = await attachLabels(db, await db.readyIssues())
     return c.json({ data, count: data.length })
   })
 
   router.get('/issues/blocked', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const data = await attachLabels(db, await db.blockedIssues())
     return c.json({ data, count: data.length })
   })
 
   router.get('/issues/:id', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const issue = await db.issueById(c.req.param('id'))
     if (!issue) return c.json({ error: 'Not found' }, 404)
 
@@ -60,11 +69,13 @@ export const issueRoutes = (db) => {
   })
 
   router.get('/issues/:id/dependencies', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const data = await db.dependenciesFor(c.req.param('id'))
     return c.json({ data })
   })
 
   router.get('/epics', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const epics = await db.epics()
     const data = await Promise.all(epics.map(async (epic) => {
       const children = await db.epicChildren(epic.id)
@@ -75,15 +86,18 @@ export const issueRoutes = (db) => {
   })
 
   router.get('/epics/:id/children', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const data = await attachLabels(db, await db.epicChildren(c.req.param('id')))
     return c.json({ data, count: data.length })
   })
 
   router.get('/labels', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     return c.json({ data: await db.labels() })
   })
 
   router.get('/search', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const q = c.req.query('q')
     if (!q) return c.json({ data: [], count: 0 })
     const data = await attachLabels(db, await db.searchIssues(q))
@@ -91,6 +105,7 @@ export const issueRoutes = (db) => {
   })
 
   router.patch('/issues/:id/status', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
     const id = c.req.param('id')
     const { status } = await c.req.json()
     const valid = ['open', 'in_progress', 'closed']

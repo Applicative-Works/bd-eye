@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { Markdown } from './Markdown.jsx'
 import { CopyableId } from './CopyableId.jsx'
+import { apiUrl } from '../projectUrl.js'
 
 /**
  * @typedef {Object} Comment
@@ -51,8 +52,8 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
 
       try {
         const [issueRes, depsRes] = await Promise.all([
-          fetch(`/api/issues/${issueId}`),
-          fetch(`/api/issues/${issueId}/dependencies`)
+          fetch(apiUrl(`/issues/${issueId}`)),
+          fetch(apiUrl(`/issues/${issueId}/dependencies`))
         ])
 
         if (!issueRes.ok) throw new Error('Failed to fetch issue')

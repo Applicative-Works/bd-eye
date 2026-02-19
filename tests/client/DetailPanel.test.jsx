@@ -7,6 +7,10 @@ vi.mock('../../src/client/components/Markdown.jsx', () => ({
   Markdown: ({ text }) => <div data-testid="markdown">{text}</div>
 }))
 
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/test-project${path}`
+}))
+
 import { DetailPanel } from '../../src/client/components/DetailPanel.jsx'
 
 const baseIssue = {
@@ -182,8 +186,8 @@ describe('DetailPanel', () => {
     mockFetchSuccess()
     render(<DetailPanel issueId="PROJ-42" onClose={() => {}} onSelectIssue={() => {}} />)
     await waitFor(() => expect(screen.getByText('PROJ-42')).toBeInTheDocument())
-    expect(global.fetch).toHaveBeenCalledWith('/api/issues/PROJ-42')
-    expect(global.fetch).toHaveBeenCalledWith('/api/issues/PROJ-42/dependencies')
+    expect(global.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/PROJ-42')
+    expect(global.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/PROJ-42/dependencies')
   })
 
   test('does not render dependencies section when empty', async () => {

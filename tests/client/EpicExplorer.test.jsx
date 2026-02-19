@@ -14,6 +14,10 @@ vi.mock('../../src/client/router.js', () => ({
   initRouter: vi.fn(),
 }))
 
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/test-project${path}`
+}))
+
 import { EpicExplorer } from '../../src/client/components/EpicExplorer.jsx'
 import { selectIssue } from '../../src/client/router.js'
 
@@ -36,7 +40,7 @@ afterEach(cleanup)
 
 const setupFetch = (epicData = epics, childData = epicChildren) => {
   global.fetch = vi.fn((url) => {
-    if (url === '/api/epics') {
+    if (url === '/api/projects/test-project/epics') {
       return Promise.resolve({ json: () => Promise.resolve({ data: epicData }) })
     }
     if (url.includes('/children')) {
@@ -99,7 +103,7 @@ describe('EpicExplorer', () => {
     await waitFor(() => expect(screen.getByText('Login form')).toBeInTheDocument())
     expect(screen.getByText('OAuth flow')).toBeInTheDocument()
     expect(screen.getByText('Session mgmt')).toBeInTheDocument()
-    expect(global.fetch).toHaveBeenCalledWith('/api/epics/EPIC-1/children')
+    expect(global.fetch).toHaveBeenCalledWith('/api/projects/test-project/epics/EPIC-1/children')
   })
 
   test('collapses epic on second click', async () => {

@@ -1,4 +1,9 @@
-import { signal, computed } from '@preact/signals'
+import { signal } from '@preact/signals'
+
+export const currentProject = signal(localStorage.getItem('bd-eye.lastProject') || null)
+export const projectList = signal([])
+export const projectsLoading = signal(true)
+currentProject.subscribe(v => { if (v) localStorage.setItem('bd-eye.lastProject', v) })
 
 export const currentView = signal('board')
 export const selectedIssueId = signal(null)

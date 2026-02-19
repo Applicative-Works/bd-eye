@@ -20,6 +20,10 @@ vi.mock('../../src/client/state.js', () => ({
   get closedDays() { return signal(null) },
 }))
 
+vi.mock('../../src/client/projectUrl.js', () => ({
+  apiUrl: (path) => `/api/projects/test-project${path}`
+}))
+
 import { DependencyGraph } from '../../src/client/components/DependencyGraph.jsx'
 import { selectIssue } from '../../src/client/router.js'
 
@@ -62,7 +66,7 @@ describe('DependencyGraph', () => {
       render(<DependencyGraph />)
       const input = screen.getByPlaceholderText('Search for an issue...')
       fireEvent.input(input, { target: { value: 'test' } })
-      await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/search?q=test'))
+      await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/projects/test-project/search?q=test'))
     })
 
     test('search results are displayed and clickable', async () => {
@@ -71,7 +75,7 @@ describe('DependencyGraph', () => {
         { id: 'PROJ-2', title: 'Second issue' },
       ]
       global.fetch = vi.fn((url) => {
-        if (url.includes('/api/search')) {
+        if (url.includes('/api/projects/test-project/search')) {
           return Promise.resolve({ json: () => Promise.resolve({ data: results }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -89,7 +93,7 @@ describe('DependencyGraph', () => {
 
     test('empty search clears results', async () => {
       global.fetch = vi.fn((url) => {
-        if (url.includes('/api/search')) {
+        if (url.includes('/api/projects/test-project/search')) {
           return Promise.resolve({ json: () => Promise.resolve({ data: [{ id: 'X', title: 'Found' }] }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -120,7 +124,7 @@ describe('DependencyGraph', () => {
 
       const setupSearchResults = async () => {
         global.fetch = vi.fn((url) => {
-          if (url.includes('/api/search'))
+          if (url.includes('/api/projects/test-project/search'))
             return Promise.resolve({ json: () => Promise.resolve({ data: results }) })
           return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
         })
@@ -191,10 +195,10 @@ describe('DependencyGraph', () => {
       const deps = { blockedBy: [], blocks: [] }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/PROJ-1') {
+        if (url === '/api/projects/test-project/issues/PROJ-1') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/PROJ-1/dependencies') {
+        if (url === '/api/projects/test-project/issues/PROJ-1/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: deps }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -215,10 +219,10 @@ describe('DependencyGraph', () => {
       }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/PROJ-2') {
+        if (url === '/api/projects/test-project/issues/PROJ-2') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/PROJ-2/dependencies') {
+        if (url === '/api/projects/test-project/issues/PROJ-2/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: deps }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -239,10 +243,10 @@ describe('DependencyGraph', () => {
       }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/PROJ-1') {
+        if (url === '/api/projects/test-project/issues/PROJ-1') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/PROJ-1/dependencies') {
+        if (url === '/api/projects/test-project/issues/PROJ-1/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: deps }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -262,10 +266,10 @@ describe('DependencyGraph', () => {
       }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/PROJ-2') {
+        if (url === '/api/projects/test-project/issues/PROJ-2') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/PROJ-2/dependencies') {
+        if (url === '/api/projects/test-project/issues/PROJ-2/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: deps }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -302,10 +306,10 @@ describe('DependencyGraph', () => {
       }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/MAIN') {
+        if (url === '/api/projects/test-project/issues/MAIN') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/MAIN/dependencies') {
+        if (url === '/api/projects/test-project/issues/MAIN/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: deps }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -320,10 +324,10 @@ describe('DependencyGraph', () => {
       const issue = { id: 'PROJ-5', title: 'Loaded', status: 'open', priority: 1 }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/PROJ-5') {
+        if (url === '/api/projects/test-project/issues/PROJ-5') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/PROJ-5/dependencies') {
+        if (url === '/api/projects/test-project/issues/PROJ-5/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: { blockedBy: [], blocks: [] } }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -353,10 +357,10 @@ describe('DependencyGraph', () => {
         { id: 'PROJ-2', title: 'Task B', status: 'closed', priority: 2 },
       ]
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues') {
+        if (url === '/api/projects/test-project/issues') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issues }) })
         }
-        if (url === '/api/issues/blocked') {
+        if (url === '/api/projects/test-project/issues/blocked') {
           return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: { blockedBy: [], blocks: [] } }) })
@@ -378,10 +382,10 @@ describe('DependencyGraph', () => {
       const blockedList = [{ id: 'PROJ-2', blocked_by_count: 1 }]
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues') {
+        if (url === '/api/projects/test-project/issues') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issues }) })
         }
-        if (url === '/api/issues/blocked') {
+        if (url === '/api/projects/test-project/issues/blocked') {
           return Promise.resolve({ json: () => Promise.resolve({ data: blockedList }) })
         }
         if (url.includes('/dependencies')) {
@@ -405,10 +409,10 @@ describe('DependencyGraph', () => {
         { id: 'PROJ-1', title: 'This is a very long title that exceeds the limit', status: 'open', priority: 1 },
       ]
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues') {
+        if (url === '/api/projects/test-project/issues') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issues }) })
         }
-        if (url === '/api/issues/blocked') {
+        if (url === '/api/projects/test-project/issues/blocked') {
           return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -432,18 +436,18 @@ describe('DependencyGraph', () => {
       ]
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues') {
+        if (url === '/api/projects/test-project/issues') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issues }) })
         }
-        if (url === '/api/issues/blocked') {
+        if (url === '/api/projects/test-project/issues/blocked') {
           return Promise.resolve({ json: () => Promise.resolve({ data: blockedList }) })
         }
-        if (url === '/api/issues/B/dependencies') {
+        if (url === '/api/projects/test-project/issues/B/dependencies') {
           return Promise.resolve({
             json: () => Promise.resolve({ data: { blockedBy: [{ id: 'A' }], blocks: [] } })
           })
         }
-        if (url === '/api/issues/C/dependencies') {
+        if (url === '/api/projects/test-project/issues/C/dependencies') {
           return Promise.resolve({
             json: () => Promise.resolve({ data: { blockedBy: [{ id: 'B' }], blocks: [] } })
           })
@@ -472,10 +476,10 @@ describe('DependencyGraph', () => {
     test('clicking an SVG node calls selectIssue', async () => {
       const issues = [{ id: 'PROJ-1', title: 'Clickable', status: 'open', priority: 1 }]
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues') {
+        if (url === '/api/projects/test-project/issues') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issues }) })
         }
-        if (url === '/api/issues/blocked') {
+        if (url === '/api/projects/test-project/issues/blocked') {
           return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })
@@ -502,10 +506,10 @@ describe('DependencyGraph', () => {
       const blocked = hasBlockers ? [{ id: 'PROJ-1', blocked_by_count: 1 }] : []
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues') {
+        if (url === '/api/projects/test-project/issues') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issues }) })
         }
-        if (url === '/api/issues/blocked') {
+        if (url === '/api/projects/test-project/issues/blocked') {
           return Promise.resolve({ json: () => Promise.resolve({ data: blocked }) })
         }
         if (url.includes('/dependencies')) {
@@ -536,10 +540,10 @@ describe('DependencyGraph', () => {
       }
 
       global.fetch = vi.fn((url) => {
-        if (url === '/api/issues/SEL') {
+        if (url === '/api/projects/test-project/issues/SEL') {
           return Promise.resolve({ json: () => Promise.resolve({ data: issue }) })
         }
-        if (url === '/api/issues/SEL/dependencies') {
+        if (url === '/api/projects/test-project/issues/SEL/dependencies') {
           return Promise.resolve({ json: () => Promise.resolve({ data: deps }) })
         }
         return Promise.resolve({ json: () => Promise.resolve({ data: [] }) })

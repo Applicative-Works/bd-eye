@@ -95,7 +95,7 @@ const FeedEntry = ({ event, isFirst }) => (
 )
 
 export const ActivityFeed = () => {
-  const { issues, loading } = useIssues('/api/issues')
+  const { issues, loading } = useIssues('/issues')
 
   if (loading) return <p class="text-secondary">Loading...</p>
 

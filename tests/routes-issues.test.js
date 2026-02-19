@@ -52,15 +52,17 @@ const db = {
   close: async () => {},
 }
 
+const dbFor = async () => db
+
 let app
 
 beforeAll(() => {
   app = new Hono()
-  app.route('/api', issueRoutes(db))
+  app.route('/api/projects/:project', issueRoutes(dbFor))
 })
 
 const get = async (path) => {
-  const res = await app.request(`/api${path}`)
+  const res = await app.request(`/api/projects/testdb${path}`)
   return { status: res.status, body: await res.json() }
 }
 

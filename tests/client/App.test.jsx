@@ -6,13 +6,18 @@ import { signal } from '@preact/signals'
 
 const currentView = signal('board')
 const selectedIssueId = signal(null)
-
 const lastUpdated = signal(null)
+const projectListSignal = signal([{ name: 'test-project', issueCount: 5 }])
+const projectsLoadingSignal = signal(false)
+const currentProjectSignal = signal('test-project')
 
 vi.mock('../../src/client/state.js', () => ({
   get currentView() { return currentView },
   get selectedIssueId() { return selectedIssueId },
   get lastUpdated() { return lastUpdated },
+  get projectList() { return projectListSignal },
+  get projectsLoading() { return projectsLoadingSignal },
+  get currentProject() { return currentProjectSignal },
 }))
 
 vi.mock('../../src/client/router.js', () => ({
@@ -20,6 +25,10 @@ vi.mock('../../src/client/router.js', () => ({
   navigate: vi.fn(),
   clearSelection: vi.fn(),
   selectIssue: vi.fn(),
+}))
+
+vi.mock('../../src/client/hooks/useProjects.js', () => ({
+  useProjects: vi.fn()
 }))
 
 vi.mock('../../src/client/components/NavBar.jsx', () => ({
@@ -96,6 +105,9 @@ const removeFakeColumns = () => {
 beforeEach(() => {
   currentView.value = 'board'
   selectedIssueId.value = null
+  projectListSignal.value = [{ name: 'test-project', issueCount: 5 }]
+  projectsLoadingSignal.value = false
+  currentProjectSignal.value = 'test-project'
   vi.clearAllMocks()
 })
 
@@ -338,5 +350,35 @@ describe('App', () => {
 
     expect(focusedAfterArrow?.dataset.cardId).toBe(focusedAfterVi?.dataset.cardId)
     removeFakeColumns()
+  })
+})
+
+describe('App loading and empty states', () => {
+  test('shows loading state while projects are loading', () => {
+    projectsLoadingSignal.value = true
+    render(<App />)
+    expect(screen.getByText('Loading projects...')).toBeInTheDocument()
+    expect(screen.queryByTestId('board')).not.toBeInTheDocument()
+  })
+
+  test('shows empty state when no projects found after loading', () => {
+    projectsLoadingSignal.value = false
+    projectListSignal.value = []
+    render(<App />)
+    expect(screen.getByText('No beads projects found')).toBeInTheDocument()
+    expect(screen.getByText('Refresh')).toBeInTheDocument()
+  })
+
+  test('shows content when projects are loaded', () => {
+    projectsLoadingSignal.value = false
+    projectListSignal.value = [{ name: 'test', issueCount: 1 }]
+    render(<App />)
+    expect(screen.getByTestId('board')).toBeInTheDocument()
+  })
+
+  test('always renders NavBar even during loading', () => {
+    projectsLoadingSignal.value = true
+    render(<App />)
+    expect(screen.getByTestId('navbar')).toBeInTheDocument()
   })
 })
