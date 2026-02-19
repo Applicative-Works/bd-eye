@@ -20,7 +20,11 @@ export const columnMode = signal('status')
 export const closedDays = signal(null)
 export const lastUpdated = signal(null)
 export const changedIds = signal(/** @type {Set<string>} */ (new Set()))
-export const columnSortOrders = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })
+const storedSortOrders = (() => {
+  try { return JSON.parse(localStorage.getItem('bd-eye.sortOrders')) } catch { return null }
+})()
+export const columnSortOrders = signal(storedSortOrders || { open: 'priority', in_progress: 'priority', closed: 'priority' })
+columnSortOrders.subscribe(v => localStorage.setItem('bd-eye.sortOrders', JSON.stringify(v)))
 export const swimlaneGrouping = signal(null)
 
 const storedWipLimits = (() => {
