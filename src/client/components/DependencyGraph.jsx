@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef, useMemo, useReducer } from 'preact/hooks'
+import dagre from 'dagre'
 import { selectedIssueId } from '../state.js'
 import { selectIssue } from '../router.js'
 
@@ -124,200 +125,273 @@ const FocusView = ({ issueId }) => {
   )
 }
 
+const NODE_W = 180
+const NODE_H = 60
+
+const truncate = (str, len) =>
+  str.length > len ? str.slice(0, len - 1) + '…' : str
+
+const edgePath = (points) => {
+  if (points.length < 2) return ''
+  const [first, ...rest] = points
+  let d = `M${first.x},${first.y}`
+  if (rest.length === 1) {
+    d += `L${rest[0].x},${rest[0].y}`
+  } else {
+    for (let i = 0; i < rest.length - 1; i++) {
+      const curr = rest[i]
+      const next = rest[i + 1]
+      const cx = (curr.x + next.x) / 2
+      const cy = (curr.y + next.y) / 2
+      d += `Q${curr.x},${curr.y} ${cx},${cy}`
+    }
+    const last = rest[rest.length - 1]
+    d += `L${last.x},${last.y}`
+  }
+  return d
+}
+
+const useGraphLayout = (issues, blockedSet, dependencies) =>
+  useMemo(() => {
+    if (issues.length === 0) return { nodes: [], edges: [], width: 0, height: 0 }
+
+    const g = new dagre.graphlib.Graph()
+    g.setGraph({ rankdir: 'TB', nodesep: 40, ranksep: 80, marginx: 40, marginy: 40 })
+    g.setDefaultEdgeLabel(() => ({}))
+
+    issues.forEach(issue => g.setNode(issue.id, { width: NODE_W, height: NODE_H, issue }))
+
+    dependencies.forEach((blockers, targetId) => {
+      blockers.forEach(blockerId => {
+        if (g.hasNode(blockerId) && g.hasNode(targetId)) {
+          g.setEdge(blockerId, targetId)
+        }
+      })
+    })
+
+    dagre.layout(g)
+
+    const nodes = g.nodes().map(id => {
+      const n = g.node(id)
+      return { id, x: n.x - NODE_W / 2, y: n.y - NODE_H / 2, issue: n.issue, hasBlockers: blockedSet.has(id) }
+    })
+
+    const edges = g.edges().map(e => ({
+      source: e.v,
+      target: e.w,
+      points: g.edge(e).points,
+    }))
+
+    const graphMeta = g.graph()
+    return { nodes, edges, width: graphMeta.width || 800, height: graphMeta.height || 400 }
+  }, [issues, blockedSet, dependencies])
+
+const transformReducer = (state, action) => {
+  switch (action.type) {
+    case 'pan':
+      return { ...state, x: state.x + action.dx, y: state.y + action.dy }
+    case 'zoom': {
+      const newK = Math.max(0.3, Math.min(3, state.k * action.factor))
+      const ratio = newK / state.k
+      return {
+        k: newK,
+        x: action.cx - ratio * (action.cx - state.x),
+        y: action.cy - ratio * (action.cy - state.y),
+      }
+    }
+    case 'fit':
+      return action.transform
+    default:
+      return state
+  }
+}
+
 const FullGraphView = () => {
-  const [issues, setIssues] = useState(/** @type {Issue[]} */ ([]))
-  const [blockedIssues, setBlockedIssues] = useState(/** @type {Set<string>} */ (new Set()))
-  const [dependencies, setDependencies] = useState(/** @type {Map<string, string[]>} */ (new Map()))
+  const [issues, setIssues] = useState([])
+  const [blockedSet, setBlockedSet] = useState(new Set())
+  const [dependencies, setDependencies] = useState(new Map())
   const [loading, setLoading] = useState(false)
+  const [hoveredNode, setHoveredNode] = useState(null)
+  const [tooltip, setTooltip] = useState(null)
+
+  const svgRef = useRef(null)
+  const containerRef = useRef(null)
+  const panRef = useRef(null)
+
+  const [transform, dispatch] = useReducer(transformReducer, { x: 0, y: 0, k: 1 })
 
   useEffect(() => {
     setLoading(true)
-
     Promise.all([
       fetch('/api/issues').then(r => r.json()),
-      fetch('/api/issues/blocked').then(r => r.json())
+      fetch('/api/issues/blocked').then(r => r.json()),
     ])
       .then(([issuesRes, blockedRes]) => {
         const allIssues = issuesRes.data || []
         const blocked = new Set((blockedRes.data || []).map(i => i.id))
-
         setIssues(allIssues)
-        setBlockedIssues(blocked)
+        setBlockedSet(blocked)
 
-        const depPromises = Array.from(blocked).map(id =>
-          fetch(`/api/issues/${id}/dependencies`)
-            .then(r => r.json())
-            .then(({ data }) => ({
-              id,
-              blockers: (data.blockedBy || []).map(b => b.id)
-            }))
+        return Promise.all(
+          Array.from(blocked).map(id =>
+            fetch(`/api/issues/${id}/dependencies`)
+              .then(r => r.json())
+              .then(({ data }) => ({ id, blockers: (data.blockedBy || []).map(b => b.id) }))
+          )
         )
-
-        return Promise.all(depPromises)
       })
       .then(depData => {
         const depMap = new Map()
-        depData.forEach(({ id, blockers }) => {
-          depMap.set(id, blockers)
-        })
+        depData.forEach(({ id, blockers }) => depMap.set(id, blockers))
         setDependencies(depMap)
       })
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) {
-    return <div class="dep-svg-empty">Loading full graph...</div>
+  const { nodes, edges, width, height } = useGraphLayout(issues, blockedSet, dependencies)
+
+  const fitToView = () => {
+    const container = containerRef.current
+    if (!container || width === 0) return
+    const cw = container.clientWidth
+    const ch = container.clientHeight
+    const k = Math.min(cw / width, ch / height, 1) * 0.9
+    dispatch({ type: 'fit', transform: { x: (cw - width * k) / 2, y: (ch - height * k) / 2, k } })
   }
 
-  const nodes = issues
-  const layers = computeLayers(nodes, dependencies)
+  useEffect(() => {
+    if (nodes.length > 0) fitToView()
+  }, [nodes.length])
 
-  const nodeWidth = 180
-  const nodeHeight = 60
-  const layerHeight = 120
-  const horizontalGap = 40
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const onWheel = (e) => {
+      e.preventDefault()
+      const rect = svg.getBoundingClientRect()
+      const cx = e.clientX - rect.left
+      const cy = e.clientY - rect.top
+      const factor = e.deltaY < 0 ? 1.1 : 0.9
+      dispatch({ type: 'zoom', factor, cx, cy })
+    }
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [])
 
-  const layerWidths = layers.map(layer =>
-    Math.max(layer.length * nodeWidth + (layer.length - 1) * horizontalGap, nodeWidth)
-  )
-  const maxWidth = Math.max(...layerWidths, 800)
-  const svgHeight = layers.length * layerHeight + 100
+  const onPointerDown = (e) => {
+    if (e.button !== 0) return
+    if (e.target.closest('.dep-graph-node')) return
+    e.preventDefault()
+    panRef.current = { x: e.clientX, y: e.clientY }
+    const onMove = (me) => {
+      if (!panRef.current) return
+      dispatch({ type: 'pan', dx: me.clientX - panRef.current.x, dy: me.clientY - panRef.current.y })
+      panRef.current = { x: me.clientX, y: me.clientY }
+    }
+    const onUp = () => {
+      panRef.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
 
-  const nodePositions = new Map()
-  layers.forEach((layer, layerIndex) => {
-    const y = layerIndex * layerHeight + 50
-    const layerWidth = layer.length * nodeWidth + (layer.length - 1) * horizontalGap
-    const startX = (maxWidth - layerWidth) / 2
+  const connectedEdges = hoveredNode
+    ? new Set(edges.filter(e => e.source === hoveredNode || e.target === hoveredNode).map((_, i) => i))
+    : null
 
-    layer.forEach((nodeId, index) => {
-      const x = startX + index * (nodeWidth + horizontalGap)
-      nodePositions.set(nodeId, { x, y })
-    })
-  })
+  const onNodeEnter = (node, e) => {
+    setHoveredNode(node.id)
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (rect) {
+      setTooltip({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top - 10, issue: node.issue })
+    }
+  }
 
-  const edges = []
-  dependencies.forEach((blockers, targetId) => {
-    blockers.forEach(blockerId => {
-      const source = nodePositions.get(blockerId)
-      const target = nodePositions.get(targetId)
-      if (source && target) {
-        edges.push({
-          x1: source.x + nodeWidth / 2,
-          y1: source.y + nodeHeight,
-          x2: target.x + nodeWidth / 2,
-          y2: target.y
-        })
-      }
-    })
-  })
+  const onNodeLeave = () => {
+    setHoveredNode(null)
+    setTooltip(null)
+  }
+
+  if (loading) return <div class="dep-svg-empty">Loading full graph...</div>
+  if (nodes.length === 0) return <div class="dep-svg-empty">No issues to display</div>
 
   return (
-    <svg class="dep-svg" width={maxWidth} height={svgHeight}>
-      {edges.map((edge, i) => (
-        <line
-          key={i}
-          class="dep-svg-edge"
-          x1={edge.x1}
-          y1={edge.y1}
-          x2={edge.x2}
-          y2={edge.y2}
-          stroke="var(--color-border)"
-          stroke-width="2"
-          marker-end="url(#arrowhead)"
-        />
-      ))}
-
-      <defs>
-        <marker
-          id="arrowhead"
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
-          orient="auto"
-        >
-          <polygon points="0 0, 10 3, 0 6" fill="var(--color-border)" />
-        </marker>
-      </defs>
-
-      {nodes.map(issue => {
-        const pos = nodePositions.get(issue.id)
-        if (!pos) return null
-
-        const hasBlockers = blockedIssues.has(issue.id)
-        const borderColor = getNodeBorderColor(issue, hasBlockers)
-
-        return (
-          <g key={issue.id} onClick={() => selectIssue(issue.id)} style="cursor: pointer">
-            <rect
-              class="dep-svg-node"
-              x={pos.x}
-              y={pos.y}
-              width={nodeWidth}
-              height={nodeHeight}
-              fill="var(--color-bg-secondary)"
-              stroke={borderColor}
-              stroke-width="2"
-              rx="6"
-            />
-            <text
-              x={pos.x + 8}
-              y={pos.y + 20}
-              font-family="var(--font-mono)"
-              font-size="12"
-              fill="var(--color-text-primary)"
-            >
-              {issue.id}
-            </text>
-            <text
-              x={pos.x + 8}
-              y={pos.y + 40}
-              font-family="var(--font-sans)"
-              font-size="11"
-              fill="var(--color-text-secondary)"
-            >
-              {truncate(issue.title, 24)}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
+    <div class="dep-graph-interactive" ref={containerRef}>
+      <svg ref={svgRef} class="dep-svg-interactive" onPointerDown={onPointerDown}>
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="var(--color-border)" />
+          </marker>
+          <marker id="arrowhead-hl" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="var(--color-accent-primary)" />
+          </marker>
+        </defs>
+        <g transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
+          {edges.map((edge, i) => {
+            const highlighted = connectedEdges?.has(i)
+            const dimmed = connectedEdges && !highlighted
+            return (
+              <path
+                key={i}
+                class="dep-svg-edge"
+                d={edgePath(edge.points)}
+                fill="none"
+                stroke={highlighted ? 'var(--color-accent-primary)' : 'var(--color-border)'}
+                stroke-width={highlighted ? 2.5 : 1.5}
+                opacity={dimmed ? 0.15 : 1}
+                marker-end={highlighted ? 'url(#arrowhead-hl)' : 'url(#arrowhead)'}
+              />
+            )
+          })}
+          {nodes.map(node => {
+            const borderColor = getNodeBorderColor(node.issue, node.hasBlockers)
+            const dimmed = hoveredNode && hoveredNode !== node.id &&
+              !edges.some(e => (e.source === hoveredNode || e.target === hoveredNode) &&
+                (e.source === node.id || e.target === node.id))
+            return (
+              <g
+                key={node.id}
+                class="dep-graph-node"
+                style={{ cursor: 'pointer', opacity: dimmed ? 0.3 : 1 }}
+                onClick={() => selectIssue(node.id)}
+                onPointerEnter={(e) => onNodeEnter(node, e)}
+                onPointerLeave={onNodeLeave}
+              >
+                <rect
+                  class="dep-svg-node"
+                  x={node.x}
+                  y={node.y}
+                  width={NODE_W}
+                  height={NODE_H}
+                  fill="var(--color-bg-secondary)"
+                  stroke={borderColor}
+                  stroke-width="2"
+                  rx="6"
+                />
+                <text x={node.x + 8} y={node.y + 22} font-size="12" fill="var(--color-text-primary)">
+                  {node.id}
+                </text>
+                <text x={node.x + 8} y={node.y + 42} font-size="11" fill="var(--color-text-secondary)">
+                  {truncate(node.issue.title, 24)}
+                </text>
+              </g>
+            )
+          })}
+        </g>
+      </svg>
+      <button class="dep-fit-btn" onClick={fitToView} title="Fit to view">⊞</button>
+      {tooltip && (
+        <div class="dep-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          <div class="dep-tooltip-id">{tooltip.issue.id}</div>
+          <div class="dep-tooltip-title">{tooltip.issue.title}</div>
+          <div class="dep-tooltip-status">{tooltip.issue.status}</div>
+        </div>
+      )}
+    </div>
   )
 }
-
-const computeLayers = (nodes, dependencies) => {
-  const nodeMap = new Map(nodes.map(n => [n.id, n]))
-  const visited = new Set()
-  const layers = []
-
-  const getLayer = (nodeId, memo = new Map()) => {
-    if (memo.has(nodeId)) return memo.get(nodeId)
-    const blockers = dependencies.get(nodeId) || []
-    const validBlockers = blockers.filter(b => nodeMap.has(b))
-
-    if (validBlockers.length === 0) {
-      memo.set(nodeId, 0)
-      return 0
-    }
-
-    const maxBlockerLayer = Math.max(...validBlockers.map(b => getLayer(b, memo)))
-    const layer = maxBlockerLayer + 1
-    memo.set(nodeId, layer)
-    return layer
-  }
-
-  const layerMemo = new Map()
-  nodes.forEach(node => {
-    const layer = getLayer(node.id, layerMemo)
-    if (!layers[layer]) layers[layer] = []
-    layers[layer].push(node.id)
-  })
-
-  return layers.filter(l => l.length > 0)
-}
-
-const truncate = (str, len) =>
-  str.length > len ? str.slice(0, len - 1) + '…' : str
 
 export const DependencyGraph = () => {
   const [mode, setMode] = useState('focus')
@@ -392,9 +466,7 @@ export const DependencyGraph = () => {
       {mode === 'focus' ? (
         <FocusView issueId={selectedIssueId.value} />
       ) : (
-        <div class="dep-svg-container">
-          <FullGraphView />
-        </div>
+        <FullGraphView />
       )}
     </div>
   )

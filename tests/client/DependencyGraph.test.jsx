@@ -331,7 +331,7 @@ describe('DependencyGraph', () => {
       const { container } = render(<DependencyGraph />)
       fireEvent.click(screen.getByText('Show Full Graph'))
 
-      await waitFor(() => expect(container.querySelector('line')).toBeInTheDocument())
+      await waitFor(() => expect(container.querySelector('path.dep-svg-edge')).toBeInTheDocument())
     })
 
     test('truncates long titles in SVG nodes', async () => {
@@ -393,7 +393,7 @@ describe('DependencyGraph', () => {
         expect(rects.length).toBe(3)
       })
 
-      const gs = [...container.querySelectorAll('g[style]')]
+      const gs = [...container.querySelectorAll('.dep-graph-node')]
       const getNodeY = (id) => {
         const g = gs.find(g => g.textContent.includes(id))
         return g ? Number(g.querySelector('rect').getAttribute('y')) : null
@@ -419,7 +419,7 @@ describe('DependencyGraph', () => {
       fireEvent.click(screen.getByText('Show Full Graph'))
 
       await waitFor(() => expect(screen.getByText('PROJ-1')).toBeInTheDocument())
-      const g = container.querySelector('g[style]')
+      const g = container.querySelector('.dep-graph-node')
       fireEvent.click(g)
       expect(selectIssue).toHaveBeenCalledWith('PROJ-1')
     })

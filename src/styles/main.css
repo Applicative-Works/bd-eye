@@ -1399,6 +1399,77 @@
 
 .dep-svg-edge {
   pointer-events: none;
+  transition: opacity 150ms ease, stroke 150ms ease;
+}
+
+.dep-graph-interactive {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.dep-svg-interactive {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dep-graph-node {
+  transition: opacity 150ms ease;
+}
+
+.dep-fit-btn {
+  position: absolute;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dep-fit-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-accent-primary);
+  color: var(--color-text-primary);
+}
+
+.dep-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  max-width: 280px;
+}
+
+.dep-tooltip-id {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.dep-tooltip-title {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  margin-top: 2px;
+}
+
+.dep-tooltip-status {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  text-transform: capitalize;
 }
 
 /* Drag and Drop */
