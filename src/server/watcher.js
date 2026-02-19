@@ -58,7 +58,7 @@ const watchDoltDb = (config, onChange) => {
 
       while (!stopped) {
         try {
-          const [rows] = await conn.query("SELECT HASHOF('HEAD') AS hash")
+          const [rows] = await conn.query("SELECT DOLT_HASHOF_DB() AS hash")
           const hash = /** @type {any[]} */ (rows)[0]?.hash ?? ''
           if (lastHash && hash !== lastHash) onChange()
           lastHash = hash
