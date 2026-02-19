@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
+import { Markdown } from './Markdown.jsx'
 
 /**
  * @typedef {Object} Comment
@@ -141,7 +142,7 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
         {issue.description && (
           <div class='panel-section'>
             <div class='panel-section-title'>Description</div>
-            <div class='pre-wrap text-base'>{issue.description}</div>
+            <Markdown text={issue.description} />
           </div>
         )}
 
@@ -188,21 +189,21 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
         {issue.acceptance_criteria && (
           <div class='panel-section'>
             <div class='panel-section-title'>Acceptance Criteria</div>
-            <div class='pre-wrap text-base'>{issue.acceptance_criteria}</div>
+            <Markdown text={issue.acceptance_criteria} />
           </div>
         )}
 
         {issue.design && (
           <div class='panel-section'>
             <div class='panel-section-title'>Design</div>
-            <div class='pre-wrap text-base'>{issue.design}</div>
+            <Markdown text={issue.design} />
           </div>
         )}
 
         {issue.notes && (
           <div class='panel-section'>
             <div class='panel-section-title'>Notes</div>
-            <div class='pre-wrap text-base'>{issue.notes}</div>
+            <Markdown text={issue.notes} />
           </div>
         )}
 
@@ -217,7 +218,7 @@ export const DetailPanel = ({ issueId, onClose, onSelectIssue }) => {
                     <span>•</span>
                     <span>{formatDate(comment.created_at)}</span>
                   </div>
-                  <div class='pre-wrap text-sm'>{comment.text}</div>
+                  <Markdown text={comment.text} />
                 </div>
               ))}
             </div>
