@@ -71,6 +71,28 @@ const removeFakeCards = () => {
   document.querySelectorAll('.card[data-card-id]').forEach(c => c.remove())
 }
 
+const addFakeColumns = (...columns) => {
+  const board = document.createElement('div')
+  board.className = 'board'
+  columns.forEach(ids => {
+    const col = document.createElement('div')
+    col.className = 'column'
+    ids.forEach(id => {
+      const card = document.createElement('div')
+      card.className = 'card'
+      card.dataset.cardId = id
+      card.scrollIntoView = vi.fn()
+      col.appendChild(card)
+    })
+    board.appendChild(col)
+  })
+  document.body.appendChild(board)
+}
+
+const removeFakeColumns = () => {
+  document.querySelectorAll('.board').forEach(b => b.remove())
+}
+
 beforeEach(() => {
   currentView.value = 'board'
   selectedIssueId.value = null
@@ -206,5 +228,70 @@ describe('App', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(document.querySelector('[data-card-id="P-1"]')).not.toHaveClass('card-focused')
     removeFakeCards()
+  })
+
+  test('l key moves focus to next column at same row', () => {
+    render(<App />)
+    addFakeColumns(['A-1', 'A-2'], ['B-1', 'B-2'], ['C-1'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="B-1"]')).toHaveClass('card-focused')
+    expect(document.querySelector('[data-card-id="A-1"]')).not.toHaveClass('card-focused')
+    removeFakeColumns()
+  })
+
+  test('h key moves focus to previous column at same row', () => {
+    render(<App />)
+    addFakeColumns(['A-1', 'A-2'], ['B-1', 'B-2'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="B-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+    removeFakeColumns()
+  })
+
+  test('l preserves row index when moving columns', () => {
+    render(<App />)
+    addFakeColumns(['A-1', 'A-2', 'A-3'], ['B-1', 'B-2', 'B-3'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="A-2"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="B-2"]')).toHaveClass('card-focused')
+    removeFakeColumns()
+  })
+
+  test('l clamps to last card when target column is shorter', () => {
+    render(<App />)
+    addFakeColumns(['A-1', 'A-2', 'A-3'], ['B-1'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="A-3"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="B-1"]')).toHaveClass('card-focused')
+    removeFakeColumns()
+  })
+
+  test('l does not go past last column', () => {
+    render(<App />)
+    addFakeColumns(['A-1'], ['B-1'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(document.querySelector('[data-card-id="B-1"]')).toHaveClass('card-focused')
+    removeFakeColumns()
+  })
+
+  test('h does not go past first column', () => {
+    render(<App />)
+    addFakeColumns(['A-1'], ['B-1'])
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }))
+    expect(document.querySelector('[data-card-id="A-1"]')).toHaveClass('card-focused')
+    removeFakeColumns()
   })
 })

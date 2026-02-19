@@ -19,16 +19,46 @@ export const App = () => {
   useEffect(() => {
     initRouter()
 
+    const focusCard = (cards, index) => {
+      cards.forEach(c => c.classList.remove('card-focused'))
+      cards[index]?.classList.add('card-focused')
+      cards[index]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+
     const moveFocus = (delta) => {
       const cards = getVisibleCards()
       if (cards.length === 0) return
 
       setFocusedIndex(prev => {
         const next = Math.max(0, Math.min(cards.length - 1, prev + delta))
-        cards.forEach(c => c.classList.remove('card-focused'))
-        cards[next]?.classList.add('card-focused')
-        cards[next]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        focusCard(cards, next)
         return next
+      })
+    }
+
+    const moveColumn = (delta) => {
+      const cards = getVisibleCards()
+      if (cards.length === 0) return
+
+      const columns = Array.from(document.querySelectorAll('.column'))
+      if (columns.length === 0) return
+
+      setFocusedIndex(prev => {
+        const focused = cards[prev]
+        const currentCol = focused?.closest('.column')
+        const colIndex = currentCol ? columns.indexOf(currentCol) : (delta > 0 ? -1 : columns.length)
+        const targetColIndex = Math.max(0, Math.min(columns.length - 1, colIndex + delta))
+        const targetCol = columns[targetColIndex]
+        const targetCards = Array.from(targetCol.querySelectorAll('.card[data-card-id]'))
+        if (targetCards.length === 0) return prev
+
+        const rowInCol = focused && currentCol ? Array.from(currentCol.querySelectorAll('.card[data-card-id]')).indexOf(focused) : 0
+        const targetCard = targetCards[Math.min(rowInCol, targetCards.length - 1)]
+        const newIndex = cards.indexOf(targetCard)
+        if (newIndex === -1) return prev
+
+        focusCard(cards, newIndex)
+        return newIndex
       })
     }
 
@@ -50,6 +80,14 @@ export const App = () => {
         case 'k':
           e.preventDefault()
           moveFocus(-1)
+          break
+        case 'l':
+          e.preventDefault()
+          moveColumn(1)
+          break
+        case 'h':
+          e.preventDefault()
+          moveColumn(-1)
           break
         case 'Enter': {
           const cards = getVisibleCards()
