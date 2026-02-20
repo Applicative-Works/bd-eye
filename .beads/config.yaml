@@ -9,6 +9,7 @@
 # issue-prefix: ""
 
 # Use no-db mode: load from JSONL, no SQLite, write back after each command
+
 # When true, bd will use .beads/issues.jsonl as the source of truth
 # instead of SQLite database
 # no-db: false
@@ -65,3 +66,6 @@ sync-branch: "beads/sync"
 # - linear.api-key
 # - github.org
 # - github.repo
+
+dolt:
+  mode: enabled
