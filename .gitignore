@@ -32,3 +32,4 @@ Thumbs.db
 coverage/
 .nyc_output/
 .aider*
+/.playwright-mcp/
