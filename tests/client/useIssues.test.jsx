@@ -63,12 +63,6 @@ describe('useIssues', () => {
     expect(useLiveUpdates).toHaveBeenCalledWith(expect.any(Function))
   })
 
-  test('sets lastUpdated after fetch completes', async () => {
-    const { result } = renderHook(() => useIssues())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(lastUpdated.value).toBeInstanceOf(Date)
-  })
-
   test('refetch reloads data', async () => {
     const { result } = renderHook(() => useIssues())
     await waitFor(() => expect(result.current.loading).toBe(false))

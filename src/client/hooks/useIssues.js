@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks'
-import { lastUpdated, changedIds } from '../state.js'
+import { changedIds } from '../state.js'
 import { apiUrl } from '../projectUrl.js'
 import { useLiveUpdates } from './useLiveUpdates.js'
 
@@ -24,7 +24,6 @@ export const useIssues = (path = '/issues') => {
     snapshotRef.current = new Map(data.map(i => [i.id, i.updated_at ?? '']))
     setIssues(data)
     setLoading(false)
-    lastUpdated.value = new Date()
   }, [endpoint])
 
   useEffect(() => { fetch_() }, [fetch_])
