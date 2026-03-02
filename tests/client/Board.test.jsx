@@ -6,7 +6,7 @@ import { signal } from '@preact/signals'
 
 const closedDaysSignal = signal(null)
 const filtersSignal = signal({ priority: [], type: [], assignee: [], label: [], blockedOnly: false, readyOnly: false })
-const columnSortOrdersSignal = signal({ open: 'priority', in_progress: 'priority', closed: 'priority' })
+const columnSortOrdersSignal = signal({ backlog: 'priority', open: 'priority', in_progress: 'priority', closed: 'priority' })
 const swimlaneGroupingSignal = signal(null)
 
 vi.mock('../../src/client/hooks/useIssues.js', () => ({
@@ -101,7 +101,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   capturedDndProps = {}
   closedDaysSignal.value = null
-  columnSortOrdersSignal.value = { open: 'priority', in_progress: 'priority', closed: 'priority' }
+  columnSortOrdersSignal.value = { backlog: 'priority', open: 'priority', in_progress: 'priority', closed: 'priority' }
   swimlaneGroupingSignal.value = null
   globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }))
   useIssues.mockImplementation((endpoint) => {
@@ -119,8 +119,9 @@ describe('Board', () => {
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
-  test('renders three columns', () => {
+  test('renders four columns', () => {
     render(<Board />)
+    expect(screen.getByTestId('column-backlog')).toBeInTheDocument()
     expect(screen.getByTestId('column-open')).toBeInTheDocument()
     expect(screen.getByTestId('column-in_progress')).toBeInTheDocument()
     expect(screen.getByTestId('column-closed')).toBeInTheDocument()
@@ -275,11 +276,65 @@ describe('drag and drop handlers', () => {
     await act(async () => capturedDndProps.onDragEnd({ active: { id: 'UNKNOWN' }, over: { id: 'closed' } }))
     expect(globalThis.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status'), expect.anything())
   })
+
+  test('drag to backlog adds backlog label via POST', async () => {
+    render(<Board />)
+    await act(async () => capturedDndProps.onDragEnd({ active: { id: 'P-1' }, over: { id: 'backlog' } }))
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/P-1/labels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: 'backlog' })
+    })
+  })
+
+  test('drag from backlog to open removes backlog label via DELETE', async () => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/issues') {
+        return {
+          issues: [
+            { id: 'BL-1', title: 'Backlogged item', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: ['backlog'], created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    render(<Board />)
+    await act(async () => capturedDndProps.onDragEnd({ active: { id: 'BL-1' }, over: { id: 'open' } }))
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/BL-1/labels/backlog', {
+      method: 'DELETE',
+    })
+  })
+
+  test('drag from backlog to in_progress removes label and patches status', async () => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/issues') {
+        return {
+          issues: [
+            { id: 'BL-2', title: 'Backlogged item', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: ['backlog'], created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    render(<Board />)
+    await act(async () => capturedDndProps.onDragEnd({ active: { id: 'BL-2' }, over: { id: 'in_progress' } }))
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/BL-2/labels/backlog', {
+      method: 'DELETE',
+    })
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/projects/test-project/issues/BL-2/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'in_progress' })
+    })
+  })
 })
 
 describe('sort controls', () => {
   test('renders sort control for each column', () => {
     render(<Board />)
+    expect(screen.getByTestId('sort-control-backlog')).toBeInTheDocument()
     expect(screen.getByTestId('sort-control-open')).toBeInTheDocument()
     expect(screen.getByTestId('sort-control-in_progress')).toBeInTheDocument()
     expect(screen.getByTestId('sort-control-closed')).toBeInTheDocument()
@@ -371,6 +426,84 @@ describe('priority sorting', () => {
   })
 })
 
+describe('backlog column', () => {
+  test('renders backlog column', () => {
+    render(<Board />)
+    expect(screen.getByTestId('column-backlog')).toBeInTheDocument()
+  })
+
+  test('routes issue with backlog label to backlog column', () => {
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/issues') {
+        return {
+          issues: [
+            { id: 'B-1', title: 'Backlogged', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: ['backlog'], created_at: '2025-01-01T00:00:00Z' },
+            { id: 'B-2', title: 'Active', status: 'open', priority: 1, issue_type: 'task', assignee: null, labels: [], created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    render(<Board />)
+    expect(screen.getByTestId('column-backlog')).toHaveTextContent('Backlogged')
+    expect(screen.getByTestId('column-open')).toHaveTextContent('Active')
+    expect(screen.getByTestId('column-open')).not.toHaveTextContent('Backlogged')
+  })
+
+  test('routes issue with future defer_until to backlog column', () => {
+    const futureDate = new Date(Date.now() + 7 * 86400000).toISOString()
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/issues') {
+        return {
+          issues: [
+            { id: 'D-1', title: 'Deferred', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: [], defer_until: futureDate, created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    render(<Board />)
+    expect(screen.getByTestId('column-backlog')).toHaveTextContent('Deferred')
+    expect(screen.getByTestId('column-open')).not.toHaveTextContent('Deferred')
+  })
+
+  test('routes issue with expired defer_until to backlog column (graduated)', () => {
+    const pastDate = new Date(Date.now() - 86400000).toISOString()
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/issues') {
+        return {
+          issues: [
+            { id: 'D-2', title: 'Graduated', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: ['backlog'], defer_until: pastDate, created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    render(<Board />)
+    expect(screen.getByTestId('column-backlog')).toHaveTextContent('Graduated')
+  })
+
+  test('issue with only expired defer_until and no backlog label goes to open', () => {
+    const pastDate = new Date(Date.now() - 86400000).toISOString()
+    useIssues.mockImplementation((endpoint) => {
+      if (endpoint === '/issues') {
+        return {
+          issues: [
+            { id: 'D-3', title: 'Expired no label', status: 'open', priority: 2, issue_type: 'task', assignee: null, labels: [], defer_until: pastDate, created_at: '2025-01-01T00:00:00Z' },
+          ],
+          loading: false, refetch: vi.fn()
+        }
+      }
+      return { issues: [], loading: false, refetch: vi.fn() }
+    })
+    render(<Board />)
+    expect(screen.getByTestId('column-open')).toHaveTextContent('Expired no label')
+  })
+})
+
 describe('swimlane grouping', () => {
   const swimlaneIssues = () => [
     { id: 'S-1', title: 'Dan open', status: 'open', priority: 1, issue_type: 'task', assignee: 'Dan', labels: ['frontend'], created_at: '2025-01-01T00:00:00Z' },
@@ -428,7 +561,7 @@ describe('swimlane grouping', () => {
     swimlaneGroupingSignal.value = 'assignee'
     const { container } = render(<Board />)
     const headers = [...container.querySelectorAll('.swim-col-label')].map(h => h.textContent)
-    expect(headers).toEqual(['Open', 'In Progress', 'Closed'])
+    expect(headers).toEqual(['Backlog', 'Open', 'In Progress', 'Closed'])
   })
 
   test('shows empty cell message when no issues in cell', () => {

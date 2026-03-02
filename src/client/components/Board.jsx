@@ -47,10 +47,24 @@ const SORT_COMPARATORS = {
 }
 
 const COLUMNS = [
+  { key: 'backlog', label: 'Backlog' },
   { key: 'open', label: 'Open' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'closed', label: 'Closed' }
 ]
+
+const isBacklogged = (issue) => {
+  if (issue.status !== 'open') return false
+  if ((issue.labels ?? []).includes('backlog')) return true
+  if (issue.defer_until && new Date(issue.defer_until) > new Date()) return true
+  return false
+}
+
+const columnFor = (issue) => {
+  const status = issue._effectiveStatus ?? issue.status
+  if (status === 'open') return isBacklogged(issue) ? 'backlog' : 'open'
+  return status
+}
 
 const PRIORITY_LABELS = { 0: 'P0 — Critical', 1: 'P1 — High', 2: 'P2 — Medium', 3: 'P3 — Low', 4: 'P4 — Backlog' }
 const PRIORITY_COLORS = { 0: '#ef4444', 1: '#f97316', 2: '#eab308', 3: '#22c55e', 4: '#6b7280' }
@@ -87,10 +101,12 @@ const sortGroupKeys = (keys, grouping) => {
 
 const buildSwimlanes = (columnIssues, grouping) => {
   const lanes = new Map()
-  for (const colKey of ['open', 'in_progress', 'closed']) {
+  const colKeys = COLUMNS.map(c => c.key)
+  const emptyLane = () => Object.fromEntries(colKeys.map(k => [k, []]))
+  for (const colKey of colKeys) {
     for (const issue of columnIssues[colKey]) {
       const gk = groupKey(issue, grouping)
-      if (!lanes.has(gk)) lanes.set(gk, { open: [], in_progress: [], closed: [] })
+      if (!lanes.has(gk)) lanes.set(gk, emptyLane())
       lanes.get(gk)[colKey].push(issue)
     }
   }
@@ -170,11 +186,12 @@ export const Board = () => {
   const effectiveStatus = (issue) => optimisticMoves.get(issue.id) ?? issue.status
 
   const sortOrders = columnSortOrders.value
+  const withEffective = filtered.map(i => ({ ...i, _effectiveStatus: effectiveStatus(i) }))
   const sorted = Object.fromEntries(
     COLUMNS.map(col => [
       col.key,
-      filtered
-        .filter(i => effectiveStatus(i) === col.key)
+      withEffective
+        .filter(i => columnFor(i) === col.key)
         .sort(SORT_COMPARATORS[sortOrders[col.key]] || SORT_COMPARATORS.priority)
     ])
   )
@@ -206,26 +223,51 @@ export const Board = () => {
     if (!over) return
 
     const issueId = active.id
-    const newStatus = over.id
+    const newColumn = over.id
     const issue = enriched.find(i => i.id === issueId)
     if (!issue) return
 
-    const currentStatus = optimisticMoves.get(issueId) ?? issue.status
-    if (currentStatus === newStatus) return
+    const currentColumn = columnFor({ ...issue, _effectiveStatus: optimisticMoves.get(issueId) ?? issue.status })
+    if (currentColumn === newColumn) return
 
     setOptimisticMoves(prev => {
       const next = new Map(prev)
-      next.set(issueId, newStatus)
+      next.set(issueId, newColumn === 'backlog' ? 'open' : newColumn)
       return next
     })
 
     try {
-      const res = await fetch(apiUrl(`/issues/${issueId}/status`), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      })
-      if (!res.ok) throw new Error('Update failed')
+      const fromBacklog = currentColumn === 'backlog'
+      const toBacklog = newColumn === 'backlog'
+      const hasBacklogLabel = (issue.labels ?? []).includes('backlog')
+
+      if (toBacklog) {
+        const res = await fetch(apiUrl(`/issues/${issueId}/labels`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label: 'backlog' })
+        })
+        if (!res.ok) throw new Error('Update failed')
+      } else if (fromBacklog) {
+        if (hasBacklogLabel) {
+          await fetch(apiUrl(`/issues/${issueId}/labels/backlog`), { method: 'DELETE' })
+        }
+        if (newColumn !== 'open') {
+          const res = await fetch(apiUrl(`/issues/${issueId}/status`), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newColumn })
+          })
+          if (!res.ok) throw new Error('Update failed')
+        }
+      } else {
+        const res = await fetch(apiUrl(`/issues/${issueId}/status`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newColumn })
+        })
+        if (!res.ok) throw new Error('Update failed')
+      }
     } catch {
       setOptimisticMoves(prev => {
         const next = new Map(prev)
@@ -240,7 +282,7 @@ export const Board = () => {
         next.delete(issueId)
         return next
       })
-    }, 3000)
+    }, 5000)
   }
 
   const handleDragCancel = () => {
