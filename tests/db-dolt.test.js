@@ -122,4 +122,22 @@ describe('openDoltDb', () => {
       expect(mockEnd).toHaveBeenCalledOnce()
     })
   })
+
+  describe('addLabel', () => {
+    it('executes INSERT IGNORE into labels', async () => {
+      await db.addLabel('i-1', 'backlog')
+      const [sql, params] = mockQuery.mock.calls.at(-1)
+      expect(sql).toMatch(/INSERT IGNORE INTO labels/)
+      expect(params).toEqual(['i-1', 'backlog'])
+    })
+  })
+
+  describe('removeLabel', () => {
+    it('executes DELETE from labels', async () => {
+      await db.removeLabel('i-1', 'backlog')
+      const [sql, params] = mockQuery.mock.calls.at(-1)
+      expect(sql).toMatch(/DELETE FROM labels/)
+      expect(params).toEqual(['i-1', 'backlog'])
+    })
+  })
 })

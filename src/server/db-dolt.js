@@ -104,6 +104,14 @@ export const openDoltDb = async (config) => {
       )
     },
 
+    addLabel: async (issueId, label) => {
+      await pool.query('INSERT IGNORE INTO labels (issue_id, label) VALUES (?, ?)', [issueId, label])
+    },
+
+    removeLabel: async (issueId, label) => {
+      await pool.query('DELETE FROM labels WHERE issue_id = ? AND label = ?', [issueId, label])
+    },
+
     close: async () => { await pool.end() }
   })
 }
