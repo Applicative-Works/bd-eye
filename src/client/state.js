@@ -30,5 +30,5 @@ export const currentUser = signal(null)
 const storedWipLimits = (() => {
   try { return JSON.parse(localStorage.getItem('wipLimits')) } catch { return null }
 })()
-export const wipLimits = signal(storedWipLimits || { open: null, in_progress: null, closed: null })
+export const wipLimits = signal(storedWipLimits || { backlog: null, open: null, in_progress: null, closed: null })
 wipLimits.subscribe(v => localStorage.setItem('wipLimits', JSON.stringify(v)))

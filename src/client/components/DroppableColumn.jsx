@@ -4,7 +4,7 @@ import { wipLimits } from '../state.js'
 
 const WipLimitEditor = ({ columnKey, count }) => {
   const [editing, setEditing] = useState(false)
-  const limit = wipLimits.value[columnKey]
+  const limit = wipLimits.value[columnKey] ?? null
   const exceeded = limit !== null && count >= limit
 
   const handleSubmit = useCallback((e) => {
@@ -60,7 +60,7 @@ export const DroppableCell = ({ id, children }) => {
 
 export const DroppableColumn = ({ col, count, headerExtra, children }) => {
   const { setNodeRef, isOver } = useDroppable({ id: col.key })
-  const limit = wipLimits.value[col.key]
+  const limit = wipLimits.value[col.key] ?? null
   const exceeded = limit !== null && count >= limit
 
   return (
