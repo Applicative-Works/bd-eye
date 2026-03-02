@@ -21,7 +21,7 @@ export const changedIds = signal(/** @type {Set<string>} */ (new Set()))
 const storedSortOrders = (() => {
   try { return JSON.parse(localStorage.getItem('bd-eye.sortOrders')) } catch { return null }
 })()
-export const columnSortOrders = signal(storedSortOrders || { open: 'priority', in_progress: 'priority', closed: 'priority' })
+export const columnSortOrders = signal(storedSortOrders || { backlog: 'priority', open: 'priority', in_progress: 'priority', closed: 'priority' })
 columnSortOrders.subscribe(v => localStorage.setItem('bd-eye.sortOrders', JSON.stringify(v)))
 export const swimlaneGrouping = signal(null)
 export const cycleTimeThresholds = signal(null)
