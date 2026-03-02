@@ -1,20 +1,16 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createWatcher } from '../src/server/watcher.js'
 
-const mockRegistry = {
-  listProjects: vi.fn().mockResolvedValue([{ name: 'testdb' }])
-}
-
 describe('createWatcher', () => {
   it('returns an object with close()', () => {
-    const watcher = createWatcher({ host: '127.0.0.1', port: 13306, user: 'test', password: '' }, mockRegistry, () => {})
+    const watcher = createWatcher({ host: '127.0.0.1', port: 13306, user: 'test', password: '' }, () => {})
     expect(watcher).toHaveProperty('close')
     expect(typeof watcher.close).toBe('function')
     watcher.close()
   })
 
   it('close() resolves without error', async () => {
-    const watcher = createWatcher({ host: '127.0.0.1', port: 13306, user: 'test', password: '' }, mockRegistry, () => {})
+    const watcher = createWatcher({ host: '127.0.0.1', port: 13306, user: 'test', password: '' }, () => {})
     await expect(watcher.close()).resolves.toBeUndefined()
   })
 })
@@ -26,18 +22,15 @@ describe('polling', () => {
 
   it('calls onChange when hash changes', { timeout: 15000 }, async () => {
     const onChange = vi.fn()
-    let callCount = 0
+    let maxCallCount = 0
     const mockEnd = vi.fn()
-    const mockQuery = vi.fn(async () => {
-      callCount++
-      if (callCount === 1) return [[{ latest: 'aaa' }]]
+    const mockQuery = vi.fn(async (sql) => {
+      if (sql === 'SHOW DATABASES') return [[{ Database: 'testdb' }]]
+      maxCallCount++
+      if (maxCallCount === 1) return [[{ latest: 'aaa' }]]
       return [[{ latest: 'bbb' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
-
-    const registry = {
-      listProjects: vi.fn().mockResolvedValue([{ name: 'testdb' }])
-    }
 
     vi.resetModules()
     vi.doMock('mysql2/promise', () => ({
@@ -45,7 +38,7 @@ describe('polling', () => {
     }))
 
     const { createWatcher: freshCreateWatcher } = await import('../src/server/watcher.js')
-    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13307, user: 'root', password: '' }, registry, onChange)
+    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13307, user: 'root', password: '' }, onChange)
 
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 10000 })
     await watcher.close()
@@ -54,18 +47,15 @@ describe('polling', () => {
 
   it('does not call onChange on first poll', async () => {
     const onChange = vi.fn()
-    let callCount = 0
+    let maxCallCount = 0
     const mockEnd = vi.fn()
-    const mockQuery = vi.fn(async () => {
-      callCount++
-      if (callCount >= 2) throw new Error('stop')
+    const mockQuery = vi.fn(async (sql) => {
+      if (sql === 'SHOW DATABASES') return [[{ Database: 'testdb' }]]
+      maxCallCount++
+      if (maxCallCount >= 2) throw new Error('stop')
       return [[{ latest: 'aaa' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
-
-    const registry = {
-      listProjects: vi.fn().mockResolvedValue([{ name: 'testdb' }])
-    }
 
     vi.resetModules()
     vi.doMock('mysql2/promise', () => ({
@@ -73,7 +63,7 @@ describe('polling', () => {
     }))
 
     const { createWatcher: freshCreateWatcher } = await import('../src/server/watcher.js')
-    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13308, user: 'root', password: '' }, registry, onChange)
+    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13308, user: 'root', password: '' }, onChange)
 
     await new Promise((r) => setTimeout(r, 3000))
     expect(onChange).not.toHaveBeenCalled()
@@ -84,7 +74,7 @@ describe('polling', () => {
   it('handles connection failure gracefully', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const onChange = vi.fn()
-    const watcher = createWatcher({ host: '127.0.0.1', port: 13309, user: 'x', password: '' }, mockRegistry, onChange)
+    const watcher = createWatcher({ host: '127.0.0.1', port: 13309, user: 'x', password: '' }, onChange)
 
     await new Promise((r) => setTimeout(r, 1000))
     expect(onChange).not.toHaveBeenCalled()
@@ -94,19 +84,20 @@ describe('polling', () => {
 
   it('handles query failure and retries', async () => {
     const onChange = vi.fn()
-    let callCount = 0
+    let showDbCount = 0
+    let maxCallCount = 0
     const mockEnd = vi.fn()
-    const mockQuery = vi.fn(async () => {
-      callCount++
-      if (callCount === 1) throw new Error('query failed')
-      if (callCount === 2) return [[{ latest: 'aaa' }]]
+    const mockQuery = vi.fn(async (sql) => {
+      if (sql === 'SHOW DATABASES') {
+        showDbCount++
+        if (showDbCount === 1) throw new Error('query failed')
+        return [[{ Database: 'testdb' }]]
+      }
+      maxCallCount++
+      if (maxCallCount === 1) return [[{ latest: 'aaa' }]]
       return [[{ latest: 'bbb' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
-
-    const registry = {
-      listProjects: vi.fn().mockResolvedValue([{ name: 'testdb' }])
-    }
 
     vi.resetModules()
     vi.doMock('mysql2/promise', () => ({
@@ -114,7 +105,7 @@ describe('polling', () => {
     }))
 
     const { createWatcher: freshCreateWatcher } = await import('../src/server/watcher.js')
-    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13310, user: 'root', password: '' }, registry, onChange)
+    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13310, user: 'root', password: '' }, onChange)
 
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 10000 })
     await watcher.close()
@@ -124,7 +115,7 @@ describe('polling', () => {
   it('uses config defaults when fields are omitted', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const onChange = vi.fn()
-    const watcher = createWatcher({}, mockRegistry, onChange)
+    const watcher = createWatcher({}, onChange)
 
     await new Promise((r) => setTimeout(r, 500))
     await watcher.close()
@@ -133,18 +124,15 @@ describe('polling', () => {
 
   it('includes project name in onChange event', { timeout: 15000 }, async () => {
     const onChange = vi.fn()
-    let callCount = 0
+    let maxCallCount = 0
     const mockEnd = vi.fn()
-    const mockQuery = vi.fn(async () => {
-      callCount++
-      if (callCount === 1) return [[{ latest: 'aaa' }]]
+    const mockQuery = vi.fn(async (sql) => {
+      if (sql === 'SHOW DATABASES') return [[{ Database: 'myproject' }]]
+      maxCallCount++
+      if (maxCallCount === 1) return [[{ latest: 'aaa' }]]
       return [[{ latest: 'bbb' }]]
     })
     const mockConn = { query: mockQuery, end: mockEnd }
-
-    const registry = {
-      listProjects: vi.fn().mockResolvedValue([{ name: 'myproject' }])
-    }
 
     vi.resetModules()
     vi.doMock('mysql2/promise', () => ({
@@ -152,7 +140,7 @@ describe('polling', () => {
     }))
 
     const { createWatcher: freshCreateWatcher } = await import('../src/server/watcher.js')
-    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13311, user: 'root', password: '' }, registry, onChange)
+    const watcher = freshCreateWatcher({ host: '127.0.0.1', port: 13311, user: 'root', password: '' }, onChange)
 
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 10000 })
     const event = JSON.parse(onChange.mock.calls[0][0])

@@ -1,10 +1,11 @@
+import { SYSTEM_DBS } from './db.js'
+
 /**
  * @param {{ host?: string, port?: number, user?: string, password?: string }} config
- * @param {{ listProjects: () => Promise<{ name: string }[]> }} registry
  * @param {(event: string) => void} onChange
  * @returns {{ close: () => Promise<void> }}
  */
-export const createWatcher = (config, registry, onChange) => {
+export const createWatcher = (config, onChange) => {
   /** @type {Map<string, string>} */
   const lastTimestamps = new Map()
   let stopped = false
@@ -21,8 +22,12 @@ export const createWatcher = (config, registry, onChange) => {
 
       while (!stopped) {
         try {
-          const projects = await registry.listProjects()
-          for (const { name } of projects) {
+          const [dbRows] = await conn.query('SHOW DATABASES')
+          const projects = /** @type {any[]} */ (dbRows)
+            .map((r) => r.Database)
+            .filter((d) => !SYSTEM_DBS.has(d))
+
+          for (const name of projects) {
             try {
               const [rows] = await conn.query(`SELECT MAX(updated_at) AS latest FROM \`${name}\`.issues`)
               const latest = String(/** @type {any[]} */ (rows)[0]?.latest ?? '')

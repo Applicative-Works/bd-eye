@@ -50,7 +50,7 @@ const broadcast = (event) => {
 const config = doltConfig()
 const registry = createRegistry(config)
 
-const watcher = createWatcher(config, registry, (event) => broadcast(event))
+const watcher = createWatcher(config, (event) => broadcast(event))
 
 const gitUserName = (() => {
   try { return execSync('git config user.name', { encoding: 'utf-8' }).trim() } catch { return null }
