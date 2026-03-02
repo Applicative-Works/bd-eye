@@ -127,6 +127,27 @@ export const issueRoutes = (dbFor) => {
     return c.json({ ok: true })
   })
 
+  router.post('/issues/:id/labels', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
+    const id = c.req.param('id')
+    const { label } = await c.req.json()
+    if (!label || typeof label !== 'string') return c.json({ error: 'Invalid label' }, 400)
+    const issue = await db.issueById(id)
+    if (!issue) return c.json({ error: 'Not found' }, 404)
+    await db.addLabel(id, label)
+    return c.json({ ok: true })
+  })
+
+  router.delete('/issues/:id/labels/:label', async (c) => {
+    const db = /** @type {import('../db.js').Db} */ (c.get('db'))
+    const id = c.req.param('id')
+    const label = c.req.param('label')
+    const issue = await db.issueById(id)
+    if (!issue) return c.json({ error: 'Not found' }, 404)
+    await db.removeLabel(id, label)
+    return c.json({ ok: true })
+  })
+
   router.get('/health', (c) => c.json({ status: 'ok' }))
 
   return router

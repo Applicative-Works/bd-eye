@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { Hono } from 'hono'
 import { issueRoutes } from '../src/server/routes/issues.js'
 
@@ -50,6 +50,8 @@ const db = {
   },
   updateIssueStatus: async () => {},
   updateIssueAssignee: async () => {},
+  addLabel: vi.fn(),
+  removeLabel: vi.fn(),
   close: async () => {},
 }
 
@@ -270,5 +272,55 @@ describe('PATCH /issues/:id/assignee', () => {
     const { status, body } = await patch('/issues/issue-1/assignee', { assignee: 123 })
     expect(status).toBe(400)
     expect(body.error).toBe('Invalid assignee')
+  })
+})
+
+const post = async (path, body) => {
+  const res = await app.request(`/api/projects/testdb${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return { status: res.status, body: await res.json() }
+}
+
+const del = async (path) => {
+  const res = await app.request(`/api/projects/testdb${path}`, { method: 'DELETE' })
+  return { status: res.status, body: await res.json() }
+}
+
+describe('POST /issues/:id/labels', () => {
+  it('adds a label and returns ok', async () => {
+    const { status, body } = await post('/issues/issue-1/labels', { label: 'backlog' })
+    expect(status).toBe(200)
+    expect(body).toEqual({ ok: true })
+    expect(db.addLabel).toHaveBeenCalledWith('issue-1', 'backlog')
+  })
+
+  it('returns 404 for non-existent issue', async () => {
+    const { status, body } = await post('/issues/nonexistent/labels', { label: 'backlog' })
+    expect(status).toBe(404)
+    expect(body.error).toBe('Not found')
+  })
+
+  it('returns 400 when label is missing', async () => {
+    const { status, body } = await post('/issues/issue-1/labels', {})
+    expect(status).toBe(400)
+    expect(body.error).toBe('Invalid label')
+  })
+})
+
+describe('DELETE /issues/:id/labels/:label', () => {
+  it('removes a label and returns ok', async () => {
+    const { status, body } = await del('/issues/issue-1/labels/backlog')
+    expect(status).toBe(200)
+    expect(body).toEqual({ ok: true })
+    expect(db.removeLabel).toHaveBeenCalledWith('issue-1', 'backlog')
+  })
+
+  it('returns 404 for non-existent issue', async () => {
+    const { status, body } = await del('/issues/nonexistent/labels/backlog')
+    expect(status).toBe(404)
+    expect(body.error).toBe('Not found')
   })
 })
