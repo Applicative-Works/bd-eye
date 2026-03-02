@@ -62,6 +62,7 @@ const isBacklogged = (issue) => {
 
 const columnFor = (issue) => {
   const status = issue._effectiveStatus ?? issue.status
+  if (status === 'backlog') return 'backlog'
   if (status === 'open') return isBacklogged(issue) ? 'backlog' : 'open'
   return status
 }
@@ -232,7 +233,7 @@ export const Board = () => {
 
     setOptimisticMoves(prev => {
       const next = new Map(prev)
-      next.set(issueId, newColumn === 'backlog' ? 'open' : newColumn)
+      next.set(issueId, newColumn)
       return next
     })
 
