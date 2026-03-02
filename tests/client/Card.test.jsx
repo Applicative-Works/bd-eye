@@ -159,4 +159,27 @@ describe('Card', () => {
     const badge = container.querySelector('.card-duration')
     expect(badge).toHaveClass('card-duration-normal')
   })
+
+  test('has card-defer-expired class when defer_until is in the past', () => {
+    const pastDate = new Date(Date.now() - 86400000).toISOString()
+    const { container } = render(<Card issue={issueWith({ defer_until: pastDate })} />)
+    expect(container.firstChild).toHaveClass('card-defer-expired')
+  })
+
+  test('does not have card-defer-expired class when defer_until is in the future', () => {
+    const futureDate = new Date(Date.now() + 7 * 86400000).toISOString()
+    const { container } = render(<Card issue={issueWith({ defer_until: futureDate })} />)
+    expect(container.firstChild).not.toHaveClass('card-defer-expired')
+  })
+
+  test('does not have card-defer-expired class when no defer_until', () => {
+    const { container } = render(<Card issue={baseIssue} />)
+    expect(container.firstChild).not.toHaveClass('card-defer-expired')
+  })
+
+  test('shows defer expired tooltip when defer_until is in the past', () => {
+    const pastDate = new Date('2026-02-15T00:00:00Z').toISOString()
+    const { container } = render(<Card issue={issueWith({ defer_until: pastDate })} />)
+    expect(container.firstChild.getAttribute('title')).toMatch(/Deferred until.*expired/)
+  })
 })

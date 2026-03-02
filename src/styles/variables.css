@@ -81,6 +81,9 @@
   --color-ready-border: #3fb950;
   --color-ready-icon: #56d364;
 
+  --color-defer-expired-bg: #3d2e08;
+  --color-defer-expired-border: #d97706;
+
   --color-blocking-text: #d29922;
 
   --color-success: #3fb950;

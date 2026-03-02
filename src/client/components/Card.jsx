@@ -20,6 +20,7 @@ import { formatDuration, issueAgeMs, durationTier } from '../cycleTime.js';
  *   updated_at?: string
  *   created_at?: string
  *   closed_at?: string
+ *   defer_until?: string | null
  * }} CardIssue
  */
 
@@ -77,11 +78,13 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, th
 
   const ageMs = issueAgeMs(issue)
   const tier = durationTier(ageMs, thresholds)
+  const deferExpired = issue.defer_until && new Date(issue.defer_until) < new Date()
 
   const cardClass = [
     'card',
     blocked_by_count > 0 ? 'card-blocked' : status === 'open' && blocked_by_count === 0 ? 'card-ready' : '',
     isDragging ? 'card-dragging' : '',
+    deferExpired ? 'card-defer-expired' : '',
   ].filter(Boolean).join(' ');
 
   const handleClick = () => {
@@ -97,6 +100,7 @@ export const Card = ({ issue, onClick, isDragging = false, isOverlay = false, th
       style={style}
       data-card-id={id}
       onClick={handleClick}
+      title={deferExpired ? `Deferred until ${new Date(issue.defer_until).toLocaleDateString()} — expired` : undefined}
       {...(isOverlay ? {} : { ...listeners, ...attributes })}
     >
       <div class='flex items-center justify-between'>
