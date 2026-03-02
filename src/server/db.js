@@ -46,6 +46,8 @@
  *   allLabels: () => Promise<{ issue_id: string, label: string }[]>
  *   updateIssueStatus: (id: string, status: string) => Promise<void>
  *   updateIssueAssignee: (id: string, assignee: string | null) => Promise<void>
+ *   addLabel: (issueId: string, label: string) => Promise<void>
+ *   removeLabel: (issueId: string, label: string) => Promise<void>
  *   close: () => Promise<void>
  * }} Db
  */
