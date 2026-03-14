@@ -3,5 +3,6 @@
   "backend": "dolt",
   "dolt_mode": "server",
   "dolt_server_port": 3307,
-  "dolt_database": "beads_bd-eye"
+  "dolt_database": "beads_bd-eye",
+  "project_id": "ea83b5c3-4be2-4201-a764-8906d8ab2649"
 }
