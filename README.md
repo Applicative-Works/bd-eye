@@ -204,6 +204,16 @@ Once configured, `bd dolt push` and `bd dolt pull` sync the beads data to the gi
 dolt clone git@github.com:<org>/<project>.git --dir beads_<project>
 ```
 
+### Git hooks
+
+Beads provides git hooks that auto-sync issue data on commit, merge, push, and checkout. Install them with:
+
+```sh
+bd hooks install
+```
+
+This is included in `bd init`, but if hooks are missing (e.g. after a fresh clone), run the command above. You can verify the installation with `bd doctor`.
+
 ## Keyboard Shortcuts
 
 | Key            | Action              |
