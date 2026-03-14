@@ -179,6 +179,31 @@ bd init --server-port 3307
 
 Restart the Dolt server to pick up the new database. bd-eye discovers all valid beads databases automatically via `SHOW DATABASES`.
 
+### Syncing beads data via git remotes
+
+Dolt can use a project's git repository as a remote, storing dolt data under `refs/dolt/data` — invisible to normal git operations but pushed and pulled alongside the code.
+
+```mermaid
+flowchart LR
+    BeadsDB["~/.dolt-data/beads_<project>/"] -->|"dolt push"| GitRepo["git@host:org/project.git"]
+    GitRepo -->|"refs/dolt/data"| DoltData["Dolt history"]
+    GitRepo -->|"refs/heads/*"| Code["Source code"]
+```
+
+To configure a beads database to sync to its project's git repo:
+
+```sh
+cd ~/.dolt-data/beads_<project>
+dolt remote add origin git@github.com:<org>/<project>.git
+dolt push origin main
+```
+
+Once configured, `bd dolt push` and `bd dolt pull` sync the beads data to the git remote. To clone a project's beads data on another machine:
+
+```sh
+dolt clone git@github.com:<org>/<project>.git --dir beads_<project>
+```
+
 ## Keyboard Shortcuts
 
 | Key            | Action              |
