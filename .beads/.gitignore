@@ -11,6 +11,9 @@ last-touched
 # Local version tracking (prevents upgrade notification spam after git ops)
 .local_version
 
+# Credential key (machine-specific)
+.beads-credential-key
+
 # Worktree redirect file (contains relative path to main repo's .beads/)
 # Must not be committed as paths would be wrong in other clones
 redirect
@@ -19,6 +22,8 @@ redirect
 # These files are machine-specific and should not be shared across clones
 .sync.lock
 export-state/
+push-state.json
+interactions.jsonl
 
 # Ephemeral store (SQLite - wisps/molecules, intentionally not versioned)
 ephemeral.sqlite3
@@ -47,3 +52,4 @@ bd.db
 # They would override fork protection in .git/info/exclude.
 # Config files (metadata.json, config.yaml) are tracked by git by default
 # since no pattern above ignores them.
+/backup/
