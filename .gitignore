@@ -37,3 +37,6 @@ coverage/
 # Dolt local database
 .dolt/
 beads_bd-eye/
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key
