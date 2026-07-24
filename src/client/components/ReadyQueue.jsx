@@ -5,8 +5,14 @@ import { CopyableId } from './CopyableId.jsx'
 import { selectIssue } from '../router.js'
 
 export const ReadyQueue = () => {
-  const { issues, loading } = useIssues('/issues/ready')
+  const { issues: rawIssues, loading } = useIssues('/issues/ready')
   const [selectedIdx, setSelectedIdx] = useState(-1)
+  const [sortDir, setSortDir] = useState('desc') // desc = newest raised first
+
+  const issues = [...rawIssues].sort((a, b) => {
+    const cmp = String(a.created_at).localeCompare(String(b.created_at))
+    return sortDir === 'asc' ? cmp : -cmp
+  })
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -53,6 +59,13 @@ export const ReadyQueue = () => {
             <th>ID</th>
             <th>Title</th>
             <th>Type</th>
+            <th
+              class="sortable"
+              onClick={() => setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))}
+              title="Sort by when the issue was raised"
+            >
+              Raised {sortDir === 'asc' ? '▲' : '▼'}
+            </th>
             <th>Assignee</th>
             <th>Labels</th>
           </tr>
@@ -68,6 +81,9 @@ export const ReadyQueue = () => {
               <td><CopyableId id={issue.id} class="font-mono text-xs" /></td>
               <td class="text-sm">{issue.title}</td>
               <td><PillBadge class={`badge-${issue.issue_type}`}>{issue.issue_type}</PillBadge></td>
+              <td class="text-xs text-secondary" title={issue.created_at}>
+                {new Date(issue.created_at).toLocaleDateString()}
+              </td>
               <td class="text-xs text-secondary">{issue.assignee || 'unassigned'}</td>
               <td>
                 <div class="flex flex-wrap gap-1">

@@ -42,14 +42,14 @@ export const openDoltDb = async (config) => {
     dependenciesFor: async (issueId) => ({
       blockedBy: await queryAll(
         `SELECT i.* FROM issues i
-         JOIN dependencies d ON i.id = d.depends_on_id
+         JOIN dependencies d ON i.id = d.depends_on_issue_id
          WHERE d.issue_id = ? AND d.type = 'blocks'`,
         [issueId]
       ),
       blocks: await queryAll(
         `SELECT i.* FROM issues i
          JOIN dependencies d ON i.id = d.issue_id
-         WHERE d.depends_on_id = ? AND d.type = 'blocks'`,
+         WHERE d.depends_on_issue_id = ? AND d.type = 'blocks'`,
         [issueId]
       )
     }),
@@ -61,7 +61,7 @@ export const openDoltDb = async (config) => {
       queryAll(
         `SELECT i.* FROM issues i
          JOIN dependencies d ON i.id = d.issue_id
-         WHERE d.depends_on_id = ? AND d.type = 'parent-child'
+         WHERE d.depends_on_issue_id = ? AND d.type = 'parent-child'
          ORDER BY i.priority, i.created_at`,
         [epicId]
       ),

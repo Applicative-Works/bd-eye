@@ -1399,6 +1399,15 @@
   vertical-align: middle;
 }
 
+.ready-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ready-table th.sortable:hover {
+  color: var(--color-text-secondary);
+}
+
 .ready-row {
   cursor: pointer;
   transition: background 100ms ease;
